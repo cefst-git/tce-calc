@@ -58,6 +58,7 @@ label.lbl{font-size:10px;color:var(--dim);margin-bottom:2px;display:block}
 .aps-dop{display:inline-flex;border-radius:4px;overflow:hidden;border:1px solid var(--brd2);font-size:10px;font-weight:600}
 .aps-dop button{background:var(--dim3);color:var(--dim);border:none;padding:2px 8px;cursor:pointer;font-family:inherit;font-size:10px;font-weight:600}
 .aps-dop button.on{background:var(--gld-bg);color:var(--gld)}
+.nom-about button.on[data-setnomabout="about"]{background:var(--orn);color:var(--gld)}
 .intake-row{display:grid;grid-template-columns:40px 1fr 40px 1fr;gap:2px 5px;align-items:center;margin-top:4px}
 .bb-wrap{position:relative}
 .bb-auto{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:8px;color:var(--gld);opacity:.5;pointer-events:none;text-transform:uppercase}
@@ -164,6 +165,7 @@ var vessels=[
 ];
 /*VESSELS_END*/
 var undoStack=[],redoStack=[],undoing=false;
+var isAbout=false;
 function saveUndo(){if(undoing)return;undoStack.push(JSON.stringify(vessels));if(undoStack.length>30)undoStack.shift();redoStack=[]}
 function doUndo(){if(undoStack.length<2)return;undoing=true;redoStack.push(undoStack.pop());vessels=JSON.parse(undoStack[undoStack.length-1]);renderVessels();renderResults();undoing=false}
 function doRedo(){if(redoStack.length<1)return;undoing=true;var s=redoStack.pop();undoStack.push(s);vessels=JSON.parse(s);renderVessels();renderResults();undoing=false}
@@ -196,12 +198,81 @@ function toggleEcoFull(vi){
   renderAll();
 }
 
+function solveEcoFull(vi,oi){
+  var v=vessels[vi],p=v.preset?PRESETS[v.preset]:null;
+  if(!p)return;
+  var opt=v.options[oi],comm=v.commission/100,sm=1+v.seaMargin/100,vlsfo=v.vlsfo,isDop=!!v.dop;
+  var eS=p.eco,fS=p.full;
+  var bD_e=(opt.bDist/(eS.bSpeed*24))*sm,lD_e=(opt.lDist/(eS.lSpeed*24))*sm;
+  var bD_f=(opt.bDist/(fS.bSpeed*24))*sm,lD_f=(opt.lDist/(fS.lSpeed*24))*sm;
+  var newHire;
+  if(isDop){
+    var numr=vlsfo*(bD_f*fS.bCons+lD_f*fS.lCons-bD_e*eS.bCons-lD_e*eS.lCons);
+    var denm=(1-comm)*(bD_e+lD_e-bD_f-lD_f);
+    if(Math.abs(denm)<0.001)return;
+    newHire=Math.round(numr/denm);
+  }else{
+    var numr=vlsfo*(lD_f*fS.lCons-lD_e*eS.lCons);
+    var denm=(1-comm)*(lD_e-lD_f);
+    if(Math.abs(denm)<0.001)return;
+    newHire=Math.round(numr/denm);
+  }
+  var oldHire=opt.hire,oldBB=opt.bb,oldBBO=opt.bbOverride;
+  opt.hire=newHire;opt.bbOverride=false;opt.bb=null;
+  renderAll();
+  flashRevert(function(){opt.hire=oldHire;opt.bb=oldBB;opt.bbOverride=oldBBO;renderAll()},
+    'input[data-vi="'+vi+'"][data-oi="'+oi+'"][data-of="hire"]');
+}
+
+function solveBunkEcoFull(vi,oi){
+  var v=vessels[vi],p=v.preset?PRESETS[v.preset]:null;
+  if(!p)return;
+  var opt=v.options[oi],comm=v.commission/100,sm=1+v.seaMargin/100,isDop=!!v.dop;
+  var eS=p.eco,fS=p.full;
+  var bD_e=(opt.bDist/(eS.bSpeed*24))*sm,lD_e=(opt.lDist/(eS.lSpeed*24))*sm;
+  var bD_f=(opt.bDist/(fS.bSpeed*24))*sm,lD_f=(opt.lDist/(fS.lSpeed*24))*sm;
+  var newBunk;
+  if(isDop){
+    var numr=opt.hire*(1-comm)*(bD_e+lD_e-bD_f-lD_f);
+    var denm=(bD_f*fS.bCons+lD_f*fS.lCons)-(bD_e*eS.bCons+lD_e*eS.lCons);
+    if(Math.abs(denm)<0.001)return;
+    newBunk=Math.round(numr/denm);
+  }else{
+    var numr=opt.hire*(1-comm)*(lD_e-lD_f);
+    var denm=(lD_f*fS.lCons)-(lD_e*eS.lCons);
+    if(Math.abs(denm)<0.001)return;
+    newBunk=Math.round(numr/denm);
+  }
+  var oldBunk=v.vlsfo;
+  v.vlsfo=newBunk;
+  renderAll();
+  flashRevert(function(){v.vlsfo=oldBunk;renderAll()},
+    'input[data-vi="'+vi+'"][data-vf="vlsfo"]');
+}
+
+function flashRevert(revertFn,selector){
+  var el=document.querySelector(selector);
+  if(el){
+    var wrap=el.closest('.u-wrap')||el.closest('.bb-wrap')||el.parentElement;
+    var count=0;
+    var iv=setInterval(function(){
+      wrap.style.background=(count%2===0)?'rgba(212,168,83,.25)':'rgba(224,122,95,.2)';
+      wrap.style.borderRadius='4px';
+      count++;
+      if(count>=12){clearInterval(iv);wrap.style.background=''}
+    },500);
+  }
+  setTimeout(function(){revertFn()},6000);
+}
+
 function calc(opt,v){
   var vlsfo=v.vlsfo,comm=v.commission/100,sm=1+v.seaMargin/100,isDop=!!v.dop;
   var bb=isDop?0:getBB(opt);
-  var bD=(opt.bDist/(v.bSpeed*24))*sm,lD=(opt.lDist/(v.lSpeed*24))*sm,pD=opt.portDays,oh=opt.offhire||0;
+  var bSpd=v.bSpeed,lSpd=v.lSpeed,bCn=v.bCons,lCn=v.lCons;
+  if(isAbout){bSpd=Math.max(0.1,bSpd-0.5);lSpd=Math.max(0.1,lSpd-0.5);bCn=bCn*1.05;lCn=lCn*1.05}
+  var bD=(opt.bDist/(bSpd*24))*sm,lD=(opt.lDist/(lSpd*24))*sm,pD=opt.portDays,oh=opt.offhire||0;
   var onH=isDop?(bD+lD+pD):(lD+pD),tot=bD+lD+pD+oh;
-  var dBB=v.bCons*vlsfo,dLB=v.lCons*vlsfo,dPB=v.portCons*vlsfo;
+  var dBB=bCn*vlsfo,dLB=lCn*vlsfo,dPB=v.portCons*vlsfo;
   var bB=bD*dBB,lB=lD*dLB,pB=pD*dPB,ohB=oh*dPB,tB=bB+lB+pB+ohB;
   var nH=opt.hire*(1-comm),nBB=isDop?0:(bb*(1-comm)),hR=onH*nH;
   var vN=isDop?(hR-ohB):(hR+nBB-bB-ohB),nTCE=vN/tot,gTCE=nTCE/(1-comm);
@@ -216,10 +287,12 @@ function solveHire(srcVi,srcOi,tgtVi,tgtOi){
   var targetAdjCP=rs.adjCP,tgtIV=intakeVal(vt),targetCP=targetAdjCP+tgtIV;
   var comm=vt.commission/100,sm=1+vt.seaMargin/100;
   var opt=vt.options[tgtOi];
-  var bD=(opt.bDist/(vt.bSpeed*24))*sm,lD=(opt.lDist/(vt.lSpeed*24))*sm,pD=opt.portDays;
-  var lB=lD*vt.lCons*vt.vlsfo;
+  var bSpd=vt.bSpeed,lSpd=vt.lSpeed,bCn=vt.bCons,lCn=vt.lCons;
+  if(isAbout){bSpd=Math.max(0.1,bSpd-0.5);lSpd=Math.max(0.1,lSpd-0.5);bCn=bCn*1.05;lCn=lCn*1.05}
+  var bD=(opt.bDist/(bSpd*24))*sm,lD=(opt.lDist/(lSpd*24))*sm,pD=opt.portDays;
+  var lB=lD*lCn*vt.vlsfo;
   if(vt.dop){
-    var onH=bD+lD+pD,bB=bD*vt.bCons*vt.vlsfo,pB=pD*vt.portCons*vt.vlsfo,tB=bB+lB+pB;
+    var onH=bD+lD+pD,bB=bD*bCn*vt.vlsfo,pB=pD*vt.portCons*vt.vlsfo,tB=bB+lB+pB;
     opt.hire=Math.round((targetCP-tB)/(onH*(1-comm)));
   }else{
     var onH=lD+pD,pB=pD*vt.portCons*vt.vlsfo;
@@ -238,10 +311,10 @@ function renderVessels(){
   var nv=vessels.length,colW='flex:1;min-width:0';
   var h='<div class="vessels-row" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:14px">';
   for(var vi=0;vi<nv;vi++){h+='<div class="vessel-col" style="'+colW+'">'+buildVessel(vi)+'</div>'}
-  if(nv<4)h+='<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-start;padding-top:24px;gap:6px"><button class="btn-addv" id="btnAddVessel" style="white-space:nowrap;padding:6px 10px;font-size:11px">+ Vessel</button>';
-  if(nv>1)h+='<button class="btn-delv" id="btnRemoveVessel" style="white-space:nowrap;padding:4px 8px;font-size:10px">- Remove<br>Vessel</button>';
-  if(nv<4)h+='</div>';
-  else if(nv>1)h+='<div style="flex-shrink:0;display:flex;align-items:flex-start;padding-top:24px"><button class="btn-delv" id="btnRemoveVessel" style="white-space:nowrap;padding:4px 8px;font-size:10px">- Remove<br>Vessel</button></div>';
+  h+='<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-start;padding-top:24px;gap:6px">';
+  if(nv<4)h+='<button class="btn-addv" id="btnAddVessel" style="white-space:nowrap;padding:6px 10px;font-size:11px">+ Vessel</button>';
+  if(nv>1)h+='<button class="btn-delv" id="btnRemoveVessel" style="white-space:nowrap;padding:4px 8px;font-size:10px">\u2212</button>';
+  h+='</div>';
   if(nv===1)h+='<div style="flex:1;min-width:0"></div>';
   h+='</div>';
   document.getElementById("vesselsContainer").innerHTML=h;
@@ -274,8 +347,8 @@ function buildVessel(vi){
   h+='<div class="speed-lbl">Ballast</div><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.bSpeed)+'" step="0.01" data-vi="'+vi+'" data-vf="bSpeed" style="padding-right:34px"><span class="u-lbl">kn</span></div><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.bCons)+'" step="0.01" data-vi="'+vi+'" data-vf="bCons" style="padding-right:38px"><span class="u-lbl">MT/d</span></div>';
   h+='<div class="speed-lbl">Laden</div><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.lSpeed)+'" step="0.01" data-vi="'+vi+'" data-vf="lSpeed" style="padding-right:34px"><span class="u-lbl">kn</span></div><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.lCons)+'" step="0.01" data-vi="'+vi+'" data-vf="lCons" style="padding-right:38px"><span class="u-lbl">MT/d</span></div>';
   h+='</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:6px">';
-  h+='<div><label class="lbl">Bunkers</label><div class="u-wrap"><input class="inp" type="number" value="'+v.vlsfo+'" step="10" data-vi="'+vi+'" data-vf="vlsfo" style="padding-right:38px"><span class="u-lbl">$/MT</span></div></div>';
+  h+='<div class="speed-grid" style="margin-top:6px">';
+  h+='<div class="speed-lbl">Bunkers</div><div class="u-wrap"><input class="inp" type="number" value="'+v.vlsfo+'" step="10" data-vi="'+vi+'" data-vf="vlsfo" style="padding-right:38px"><span class="u-lbl">$/MT</span></div>';
   h+='<div><label class="lbl">Port Cons</label><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.portCons)+'" step="0.01" data-vi="'+vi+'" data-vf="portCons" style="padding-right:30px"><span class="u-lbl">MT</span></div></div>';
   h+='</div>';
 
@@ -299,8 +372,8 @@ function buildVessel(vi){
     if(i>0)h+='<button class="btn-copy" data-vi="'+vi+'" data-copyopt="'+i+'">\u29C9 Opt1</button>';
     if(v.options.length>1)h+='<button class="btn-del" data-vi="'+vi+'" data-delopt="'+i+'">&times;</button>';
     h+='<div style="display:flex;align-items:center;gap:3px;margin-left:auto">';
-    h+='<span class="opt-lbl">Port</span><div class="u-wrap" style="width:68px"><input class="inp" type="number" value="'+o.portDays+'" step="0.5" data-vi="'+vi+'" data-oi="'+i+'" data-of="portDays" style="padding-right:28px"><span class="u-lbl">d</span></div>';
-    h+='<span class="opt-lbl">Off-H</span><div class="u-wrap" style="width:68px"><input class="inp" type="number" value="'+(o.offhire||0)+'" step="0.5" data-vi="'+vi+'" data-oi="'+i+'" data-of="offhire" style="padding-right:28px"><span class="u-lbl">d</span></div>';
+    h+='<span class="opt-lbl">Port</span><div class="u-wrap" style="width:82px"><input class="inp" type="number" value="'+o.portDays+'" step="0.5" data-vi="'+vi+'" data-oi="'+i+'" data-of="portDays" style="padding-right:28px"><span class="u-lbl">d</span></div>';
+    h+='<span class="opt-lbl">Off-H</span><div class="u-wrap" style="width:82px"><input class="inp" type="number" value="'+(o.offhire||0)+'" step="0.5" data-vi="'+vi+'" data-oi="'+i+'" data-of="offhire" style="padding-right:28px"><span class="u-lbl">d</span></div>';
     h+='</div></div>';
     // Fields grid: Hire + B nm (+ $/T if intake), BB + L nm (+ Δ MT if intake)
     var cols=iv?'auto 1fr auto 1fr auto 1fr':'auto 1fr auto 1fr';
@@ -457,19 +530,19 @@ function renderResults(){
         h+='</div></div>';
 
         // Duration
-        h+='<div class="sec-head">Voyage Duration</div>';
-        h+=rw("Ballast",vl(fmtD(r.bD)+"d",(ref?cc(r.bD,ref.bD):"")),vl(fmt(opt.bDist)+" nm","sm"),1);
-        h+=rw("Laden",vl(fmtD(r.lD)+"d",(ref?cc(r.lD,ref.lD):"")),vl(fmt(opt.lDist)+" nm","sm"),1);
-        h+=rw("Port L/D",vl(fmtD(r.pD)+"d"),"",1);
-        if(anyOH){h+=(r.oh>0)?rw("Off-hire",vl(fmtD(r.oh)+"d","red"),"",1):rw("Off-hire","","",1)}
-        h+=rw("On Hire",vl(fmtD(r.onH)+"d","bold gold"+(ref?cc(r.onH,ref.onH):"")),"",1);
-        h+=rw("Total Voyage",vl(fmtD(r.tot)+"d","bold"+(ref?cc(r.tot,ref.tot):"")),"",0,1);
+        h+='<div class="sec-head" style="display:flex;justify-content:space-between;align-items:center">Voyage Duration<div style="display:flex;align-items:center;gap:4px"><span style="font-size:8px;color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">Sp/Cons basis</span><div class="aps-dop nom-about" style="font-size:8px"><button class="'+(isAbout?'':' on')+'" data-setnomabout="nom" style="padding:1px 6px;font-size:8px">NOM</button><button class="'+(isAbout?' on':'')+'" data-setnomabout="about" style="padding:1px 6px;font-size:8px">ABOUT</button></div></div></div>';
+        h+=rw("Ballast",vl(fmt(opt.bDist)+" nm","sm"),vl(fmtD(r.bD)+"d",(ref?cc(r.bD,ref.bD):"")),1);
+        h+=rw("Laden",vl(fmt(opt.lDist)+" nm","sm"),vl(fmtD(r.lD)+"d",(ref?cc(r.lD,ref.lD):"")),1);
+        h+=rw("Port L/D","",vl(fmtD(r.pD)+"d"),1);
+        if(anyOH){h+=(r.oh>0)?rw("Off-hire","",vl(fmtD(r.oh)+"d","red"),1):rw("Off-hire","","",1)}
+        h+=rw("On Hire","",vl(fmtD(r.onH)+"d","bold gold"+(ref?cc(r.onH,ref.onH):"")),1);
+        h+=rw("Total Voyage","",vl(fmtD(r.tot)+"d","bold"+(ref?cc(r.tot,ref.tot):"")),0,1);
 
         // Bunkers
         h+='<div class="sec-head">Bunker Costs</div>';
-        h+=rw("Ballast",vl(fmt(r.dBB,0)+"/d",(ref?cc(-r.dBB,-ref.dBB):"")),vl(fmt(r.bB,0),"red"+(ref?cc(-r.bB,-ref.bB):"")),1);
-        h+=rw("Laden",vl(fmt(r.dLB,0)+"/d",(ref?cc(-r.dLB,-ref.dLB):"")),vl(fmt(r.lB,0),"red"+(ref?cc(-r.lB,-ref.lB):"")),1);
-        h+=rw("Port",vl(fmt(r.dPB,0)+"/d",(ref?cc(-r.dPB,-ref.dPB):"")),vl(fmt(r.pB,0),"red"+(ref?cc(-r.pB,-ref.pB):"")),1);
+        h+=rw("Ballast",vl(fmt(r.dBB,0)+"/d","sm"+(ref?cc(-r.dBB,-ref.dBB):"")),vl(fmt(r.bB,0),"red"+(ref?cc(-r.bB,-ref.bB):"")),1);
+        h+=rw("Laden",vl(fmt(r.dLB,0)+"/d","sm"+(ref?cc(-r.dLB,-ref.dLB):"")),vl(fmt(r.lB,0),"red"+(ref?cc(-r.lB,-ref.lB):"")),1);
+        h+=rw("Port",vl(fmt(r.dPB,0)+"/d","sm"+(ref?cc(-r.dPB,-ref.dPB):"")),vl(fmt(r.pB,0),"red"+(ref?cc(-r.pB,-ref.pB):"")),1);
         if(anyOH){h+=(r.oh>0)?rw("Off-hire bunk","",vl(fmt(r.ohB,0),"red"+(ref&&ref.oh>0?cc(-r.ohB,-ref.ohB):"")),1):rw("Off-hire bunk","","",1)}
         h+=rw("Total Bunkers","",vl(fmt(r.tB,0),"bold red"+(ref?cc(-r.tB,-ref.tB):"")),0,1);
 
@@ -478,15 +551,15 @@ function renderResults(){
         h+=rw("Hire Revenue",vl(fmt(r.nH,0)+"/d","sm"+(ref?cc(r.nH,ref.nH):"")),vl(fmt(r.hR,0),"green"+(ref?cc(r.hR,ref.hR):"")),1);
         if(anyAPS){
           if(!r.isDop){
-            h+=rw("BB (net comm)",vl(fmt(r.bb,0),"sm"+(ref&&!ref.isDop?cc(r.bb,ref.bb):"")),vl(fmt(r.nBB,0),"green"+(ref?cc(r.nBB,ref.nBB):"")),1);
+            h+=rw("BB (net comm)",vl(fmt(r.bb,0)+' <span style="font-size:9px;color:var(--dim)">(gr)</span>',"sm"+(ref&&!ref.isDop?cc(r.bb,ref.bb):"")),vl(fmt(r.nBB,0),"green"+(ref?cc(r.nBB,ref.nBB):"")),1);
             h+=rw("Ballast Bunk","",vl("("+fmt(r.bB,0)+")","red"+(ref?cc(-r.bB,-ref.bB):"")),1);
           }else{
             h+=blankRow();h+=blankRow();
           }
         }
         if(anyOHrev){h+=(r.oh>0)?rw("Off-hire bunk","",vl("("+fmt(r.ohB,0)+")","red"),1):rw("Off-hire bunk","","",1)}
-        h+=rw("Net Voyage","",vl(fmt(r.vN,0),"bold"+(ref?cc(r.vN,ref.vN):"")),0,1);
-        h+='<div class="divider">'+rw("Charterer Pays","",vl(fmt(r.cP,0),"bold muted"+(ref?cc(r.cP,ref.cP):"")))+"</div>";
+        h+=rw("Net Voyage",vl(fmtD(r.tot)+"d","sm"),vl(fmt(r.vN,0),"bold"+(ref?cc(r.vN,ref.vN):"")),0,1);
+        h+='<div class="divider">'+rw("Charterer Pays",vl(fmtD(r.onH)+"d","sm"),vl(fmt(r.cP,0),"bold muted"+(ref?cc(r.cP,ref.cP):"")))+"</div>";
 
         // Intake
         if(anyIntake){
@@ -519,6 +592,13 @@ function renderResults(){
             }
           }
         }
+        // Eco=Full solver buttons
+        if(v.preset&&PRESETS[v.preset]){
+          h+='<div style="display:flex;gap:4px;margin-top:6px">';
+          h+='<button class="btn-match" style="background:var(--gld-bg4);border-color:var(--gld-brd);color:var(--gld);margin-top:0;flex:1" data-ecofull-vi="'+vi+'" data-ecofull-oi="'+oi+'">Calc Hire when Eco\u2009=\u2009Full</button>';
+          h+='<button class="btn-match" style="background:var(--gld-bg4);border-color:var(--gld-brd);color:var(--gld);margin-top:0;flex:1" data-bunkef-vi="'+vi+'" data-bunkef-oi="'+oi+'">Calc Bunkers when Eco\u2009=\u2009Full</button>';
+          h+='</div>';
+        }
         h+='</div>';
       }
       h+='</div>';
@@ -532,6 +612,18 @@ function renderResults(){
   qsa("button[data-srcvi]").forEach(function(el){el.addEventListener("click",function(){
     solveHire(+this.dataset.srcvi,+this.dataset.srcoi,+this.dataset.tgtvi,+this.dataset.tgtoi);
     this.classList.add("btn-match-flash");var self=this;setTimeout(function(){self.classList.remove("btn-match-flash")},600);
+  })});
+
+  qsa("button[data-setnomabout]").forEach(function(el){el.addEventListener("click",function(){
+    isAbout=(this.dataset.setnomabout==="about");renderResults();
+  })});
+
+  qsa("button[data-ecofull-vi]").forEach(function(el){el.addEventListener("click",function(){
+    solveEcoFull(+this.dataset.ecofullVi,+this.dataset.ecofullOi);
+  })});
+
+  qsa("button[data-bunkef-vi]").forEach(function(el){el.addEventListener("click",function(){
+    solveBunkEcoFull(+this.dataset.bunkefVi,+this.dataset.bunkefOi);
   })});
 
   // Summary - aligned with card columns
