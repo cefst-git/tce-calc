@@ -79,7 +79,7 @@ html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,system
 .rsh{font-size:9px;color:var(--dim2);text-transform:uppercase;margin:5px 0 2px;padding-bottom:1px;border-bottom:1px solid rgba(255,255,255,.04)}
 .rr{display:flex;justify-content:space-between;padding:2px 0;font-size:13px}
 .rr.hl{background:rgba(212,168,83,.05);border-radius:2px;padding:2px 3px;margin:0 -3px}
-.rl{color:var(--dim);font-weight:500}.rv{font-family:ui-monospace,monospace;font-size:14px;font-weight:500}
+.rl{color:var(--dim);font-weight:500;flex-shrink:0;width:90px}.rv{font-family:ui-monospace,monospace;font-size:14px;font-weight:500;font-variant-numeric:tabular-nums}
 .rv.red{color:var(--red)}.rv.grn{color:var(--green)}.rv.gld{color:var(--gld)}.rv.mut{color:var(--dim)}.rv.b{font-weight:700}
 .rv.cup{background:var(--grn);border-radius:2px;padding:0 2px}.rv.cdn{background:var(--orn);border-radius:2px;padding:0 2px}
 .rdv{margin-top:3px;border-top:1px solid rgba(212,168,83,.15);padding-top:3px}
@@ -110,6 +110,16 @@ html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,system
 .wmt.t{top:0;background:linear-gradient(#2a2a2e,transparent)}.wmt.b{bottom:0;background:linear-gradient(to top,#2a2a2e,transparent)}
 .pdot{font-size:28px;font-weight:700;color:var(--gld);align-self:center;padding:0 1px}
 .ftr{text-align:center;font-size:10px;color:var(--dim2);padding:14px 0}
+.npad{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1001;display:none;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.npad.show{display:flex}
+.npad-box{background:#2a2a2e;border-radius:12px;padding:16px;width:280px;text-align:center}
+body.light .npad-box{background:#f0efe8}
+.npad-lbl{font-size:12px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+.npad-inp{width:100%;font-size:28px;font-weight:700;font-family:ui-monospace,monospace;text-align:center;background:var(--c1);border:2px solid var(--gld);border-radius:8px;color:var(--txt);padding:10px;outline:none;-webkit-appearance:none;appearance:none}
+.npad-btns{display:flex;gap:8px;margin-top:12px}
+.npad-btns button{flex:1;padding:10px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;border:none}
+.npad-ok{background:rgba(212,168,83,.15);color:var(--gld)}
+.npad-cc{background:rgba(255,255,255,.06);color:var(--dim)}
 </style>
 </head>
 <body>
@@ -119,11 +129,16 @@ html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,system
 <div class="ppv" id="ppv">0</div>
 <div class="pbd" id="pbd"></div>
 </div></div>
+<div class="npad" id="npad"><div class="npad-box">
+<div class="npad-lbl" id="npadLbl">Edit</div>
+<input class="npad-inp" id="npadInp" type="text" inputmode="decimal" autocomplete="off">
+<div class="npad-btns"><button class="npad-cc" id="npadCc">Cancel</button><button class="npad-ok" id="npadOk">OK</button></div>
+</div></div>
 <script>
 /*VS*/
 var V=[{name:"Trikeri",vlsfo:900,commission:5,seaMargin:4,bSpeed:12,bCons:17,lSpeed:11.5,lCons:19.5,portCons:2.7,intakeShow:false,intakePrice:35,intakeDelta:0,dop:false,preset:null,ecoFull:"eco",p6Used:false,options:[{name:"PMO ECSA Feast",hire:18250,bb:null,bbOverride:false,bDist:7850,lDist:11400,portDays:15,offhire:0}]}];
 /*VE*/
-var AT=0,PK={},US=[],RS=[],UG=false;
+var AT=0,PK={},US=[],RS=[],UG=false,isAbout=false;
 var VF=["vlsfo","commission","seaMargin","bSpeed","bCons","lSpeed","lCons","portCons","intakePrice","intakeDelta"];
 var CF={vlsfo:{w:4,f:0},commission:{w:1,f:2},seaMargin:{w:1,f:1},bSpeed:{w:2,f:2},lSpeed:{w:2,f:2},bCons:{w:2,f:2},lCons:{w:2,f:2},portCons:{w:2,f:2},hire:{w:5,f:0},bb:{w:7,f:0},bDist:{w:5,f:0},lDist:{w:5,f:0},portDays:{w:2,f:1},intakePrice:{w:3,f:0},intakeDelta:{w:4,f:0},offhire:{w:2,f:1}};
 var PR={bki:{name:"Tess82",pc:3.5,eco:{bs:12.5,bc:23,ls:11.5,lc:22},full:{bs:14,bc:31,ls:13.5,lc:33}},sungd:{name:"Sungdong_81",pc:4,eco:{bs:12.25,bc:22,ls:12,lc:24.5},full:{bs:14,bc:29.75,ls:13,lc:30.25}},dacks:{name:"Dacks_82",pc:3.5,eco:{bs:12.5,bc:18,ls:11.5,lc:19.5},full:{bs:14,bc:24,ls:13.5,lc:28.5}}};
@@ -142,11 +157,59 @@ function doR(){if(RS.length<1)return;UG=true;var s=RS.pop();US.push(s);V=JSON.pa
 function aP(vi,k){var v=V[vi],p=PR[k],m=v.ecoFull||"eco",s=p[m];v.preset=k;v.name=p.name;v.portCons=p.pc;v.bSpeed=s.bs;v.bCons=s.bc;v.lSpeed=s.ls;v.lCons=s.lc;render()}
 function tEF(vi,m){V[vi].ecoFull=m;var v=V[vi];if(v.preset&&PR[v.preset]){var s=PR[v.preset][m];v.bSpeed=s.bs;v.bCons=s.bc;v.lSpeed=s.ls;v.lCons=s.lc}render()}
 
+function solveEF(vi,oi){
+  var v=V[vi],p=v.preset?PR[v.preset]:null;
+  if(!p)return;
+  var o=v.options[oi],cm=v.commission/100,sm=1+v.seaMargin/100,vl=v.vlsfo,pD=o.portDays,dp=!!v.dop;
+  var bD_e=(o.bDist/(p.eco.bs*24))*sm,lD_e=(o.lDist/(p.eco.ls*24))*sm;
+  var bD_f=(o.bDist/(p.full.bs*24))*sm,lD_f=(o.lDist/(p.full.ls*24))*sm;
+  var newH;
+  if(dp){var numr=vl*(bD_f*p.full.bc+lD_f*p.full.lc-bD_e*p.eco.bc-lD_e*p.eco.lc);var denm=(1-cm)*(bD_e+lD_e-bD_f-lD_f);if(Math.abs(denm)<0.001)return;newH=Math.round(numr/denm)}
+  else{var numr=vl*(lD_f*p.full.lc-lD_e*p.eco.lc);var denm=(1-cm)*(lD_e-lD_f);if(Math.abs(denm)<0.001)return;newH=Math.round(numr/denm)}
+  var oldH=o.hire,oldBB=o.bb,oldBBO=o.bbOverride;
+  o.hire=newH;o.bbOverride=false;o.bb=null;render();
+  flashMob(function(){o.hire=oldH;o.bb=oldBB;o.bbOverride=oldBBO;render()},"Hire");
+}
+
+function solveBF(vi,oi){
+  var v=V[vi],p=v.preset?PR[v.preset]:null;
+  if(!p)return;
+  var o=v.options[oi],cm=v.commission/100,sm=1+v.seaMargin/100,dp=!!v.dop;
+  var bD_e=(o.bDist/(p.eco.bs*24))*sm,lD_e=(o.lDist/(p.eco.ls*24))*sm;
+  var bD_f=(o.bDist/(p.full.bs*24))*sm,lD_f=(o.lDist/(p.full.ls*24))*sm;
+  var newB;
+  if(dp){var numr=o.hire*(1-cm)*(bD_e+lD_e-bD_f-lD_f);var denm=(bD_f*p.full.bc+lD_f*p.full.lc)-(bD_e*p.eco.bc+lD_e*p.eco.lc);if(Math.abs(denm)<0.001)return;newB=Math.round(numr/denm)}
+  else{var numr=o.hire*(1-cm)*(lD_e-lD_f);var denm=(lD_f*p.full.lc)-(lD_e*p.eco.lc);if(Math.abs(denm)<0.001)return;newB=Math.round(numr/denm)}
+  var oldB=v.vlsfo;
+  v.vlsfo=newB;render();
+  flashMob(function(){v.vlsfo=oldB;render()},"Bunk $/mt");
+}
+
+var flashTimer=null;
+function flashMob(revertFn,label){
+  if(flashTimer)clearTimeout(flashTimer);
+  // Find the card by label text
+  var cards=document.querySelectorAll('.f');
+  var target=null;
+  cards.forEach(function(c){var fl=c.querySelector('.fl');if(fl&&fl.textContent.trim().toUpperCase()===label.toUpperCase())target=c});
+  if(target){
+    var count=0;
+    var iv=setInterval(function(){
+      target.style.background=(count%2===0)?'rgba(212,168,83,.25)':'rgba(224,122,95,.2)';
+      count++;
+      if(count>=12){clearInterval(iv);target.style.background=''}
+    },500);
+  }
+  flashTimer=setTimeout(function(){revertFn()},6000);
+}
+
 function calc(o,v){
   var c=v.commission/100,s=1+v.seaMargin/100,dp=!!v.dop,bb=dp?0:gBB(o);
-  var bD=(o.bDist/(v.bSpeed*24))*s,lD=(o.lDist/(v.lSpeed*24))*s,pD=o.portDays,oh=o.offhire||0;
+  var bSpd=v.bSpeed,lSpd=v.lSpeed,bCn=v.bCons,lCn=v.lCons;
+  if(isAbout){bSpd=Math.max(0.1,bSpd-0.5);lSpd=Math.max(0.1,lSpd-0.5);bCn=bCn*1.05;lCn=lCn*1.05}
+  var bD=(o.bDist/(bSpd*24))*s,lD=(o.lDist/(lSpd*24))*s,pD=o.portDays,oh=o.offhire||0;
   var oH=dp?(bD+lD+pD):(lD+pD),tot=bD+lD+pD+oh;
-  var dB=v.bCons*v.vlsfo,dL=v.lCons*v.vlsfo,dP=v.portCons*v.vlsfo;
+  var dB=bCn*v.vlsfo,dL=lCn*v.vlsfo,dP=v.portCons*v.vlsfo;
   var bB=bD*dB,lB=lD*dL,pB=pD*dP,ohB=oh*dP,tB=bB+lB+pB+ohB;
   var nH=o.hire*(1-c),nBB=dp?0:(bb*(1-c)),hR=oH*nH;
   var vN=dp?(hR-ohB):(hR+nBB-bB-ohB),nT=vN/tot,gT=nT/(1-c);
@@ -157,8 +220,10 @@ function calc(o,v){
 function solveH(si,so,ti,to){
   var rs=calc(V[si].options[so],V[si]),tACP=rs.aCP,tIV=iV(V[ti]),tCP=tACP+tIV;
   var vt=V[ti],op=vt.options[to],cm=vt.commission/100,sm=1+vt.seaMargin/100;
-  var bD=(op.bDist/(vt.bSpeed*24))*sm,lD=(op.lDist/(vt.lSpeed*24))*sm,pD=op.portDays,lB=lD*vt.lCons*vt.vlsfo;
-  if(vt.dop){var oH=bD+lD+pD,bB=bD*vt.bCons*vt.vlsfo,pB=pD*vt.portCons*vt.vlsfo,tB=bB+lB+pB;op.hire=Math.round((tCP-tB)/(oH*(1-cm)))}
+  var bSpd=vt.bSpeed,lSpd=vt.lSpeed,bCn=vt.bCons,lCn=vt.lCons;
+  if(isAbout){bSpd=Math.max(0.1,bSpd-0.5);lSpd=Math.max(0.1,lSpd-0.5);bCn=bCn*1.05;lCn=lCn*1.05}
+  var bD=(op.bDist/(bSpd*24))*sm,lD=(op.lDist/(lSpd*24))*sm,pD=op.portDays,lB=lD*lCn*vt.vlsfo;
+  if(vt.dop){var oH=bD+lD+pD,bB=bD*bCn*vt.vlsfo,pB=pD*vt.portCons*vt.vlsfo,tB=bB+lB+pB;op.hire=Math.round((tCP-tB)/(oH*(1-cm)))}
   else{var oH=lD+pD,pB=pD*vt.portCons*vt.vlsfo;op.hire=Math.round(((tCP-lB-pB)/(1-cm)+1000000)/(oH+100))}
   op.bbOverride=false;op.bb=null;render();
 }
@@ -239,7 +304,7 @@ function render(){
     if(ivs)h+=fld("$/T",v.intakePrice,"intakePrice",vi,0,"");
     h+='</div><div class="fr">';
     if(!isDop){var bc=dr?cc(bbv,gBB(ref)):"";
-      h+='<div class="f'+(bc?" "+bc:"")+'" onclick="openP(\'BB\',\'bb\','+bbv+','+vi+','+oi+')"><div class="fl">BB'+(o.bbOverride?'':'<span class="at">AUTO</span>')+'</div><div class="fv sm">'+fm(bbv)+'</div></div>'}
+      h+='<div class="f'+(bc?" "+bc:"")+'" onclick="openP(\'BB\',\'bb\','+bbv+','+vi+','+oi+')" data-np="BB" data-npf="bb" data-npv="'+bbv+'" data-npvi="'+vi+'" data-npoi="'+oi+'"><div class="fl">BB'+(o.bbOverride?'':'<span class="at">AUTO</span>')+'</div><div class="fv sm">'+fm(bbv)+'</div></div>'}
     else{h+='<div class="f" style="visibility:hidden"></div>'}
     h+=fld("L nm",o.lDist,"lDist",vi,oi,dr?cc(o.lDist,ref.lDist):"");
     if(ivs){var dCl=v.intakeDelta>0?"up":v.intakeDelta<0?"dn":"";h+=fld("\u0394 MT",v.intakeDelta,"intakeDelta",vi,0,dCl)}
@@ -262,35 +327,43 @@ function render(){
     h+='</div><div class="ron">'+es(o.name)+'</div></div>';
     h+='<div class="tce"><div class="tl">Gross TCE</div><div class="tv'+(tc?" c"+tc:"")+'">$'+fm(r.gT)+'</div><div class="tn'+(tc?" c"+tc:"")+'">net $'+fm(r.nT)+'</div></div></div>';
     // Voyage Duration
-    h+='<div class="rsh">Voyage Duration</div>';
-    h+=rr2("Ballast",fD(r.bD)+"d",fm(o.bDist)+" nm","","",ref?cc(r.bD,ref.bD):"","");
-    h+=rr2("Laden",fD(r.lD)+"d",fm(o.lDist)+" nm","","",ref?cc(r.lD,ref.lD):"","");
-    h+=rr("Port L/D",fD(r.pD)+"d","","");
-    if(anyOH){h+=(r.oh>0)?rr("Off-hire",fD(r.oh)+"d","red",""):rr("Off-hire","","","");}
-    h+=rr("On Hire",fD(r.oH)+"d","gld b",ref?cc(r.oH,ref.oH):"");
-    h+=rrh("Total Voyage",fD(r.tot)+"d","b",ref?cc(r.tot,ref.tot):"");
+    h+='<div class="rsh" style="display:flex;justify-content:space-between;align-items:center">Voyage Duration<div style="display:flex;align-items:center;gap:3px"><span style="font-size:8px;color:var(--dim2);font-weight:400;text-transform:none;letter-spacing:0">Sp/Cons basis</span><div class="ad" style="font-size:9px"><button class="'+(isAbout?"":"on")+'" onclick="isAbout=false;render()" style="padding:1px 6px;font-size:9px">NOM</button><button class="'+(isAbout?"on":"")+'" onclick="isAbout=true;render()" style="padding:1px 6px;font-size:9px;'+(isAbout?"background:rgba(224,122,95,.12);color:var(--gld)":"")+'">ABOUT</button></div></div></div>';
+    h+=rr2("Ballast",fm(o.bDist)+" nm",fD(r.bD)+"d","mut","","",ref?cc(r.bD,ref.bD):"");
+    h+=rr2("Laden",fm(o.lDist)+" nm",fD(r.lD)+"d","mut","","",ref?cc(r.lD,ref.lD):"");
+    h+=rr3("Port L/D",fD(r.pD)+"d","","");
+    if(anyOH){h+=(r.oh>0)?rr3("Off-hire",fD(r.oh)+"d","red",""):rr("Off-hire","","","");}
+    h+=rr3("On Hire",fD(r.oH)+"d","gld b",ref?cc(r.oH,ref.oH):"");
+    h+=rrh3("Total Voyage",fD(r.tot)+"d","b",ref?cc(r.tot,ref.tot):"");
     // Bunker Costs
     h+='<div class="rsh">Bunker Costs</div>';
-    h+=rr2("Ballast",fm(r.dB,0)+"/d",fm(r.bB,0),"","red",ref?cc(-r.dB,-ref.dB):"",ref?cc(-r.bB,-ref.bB):"");
-    h+=rr2("Laden",fm(r.dL,0)+"/d",fm(r.lB,0),"","red",ref?cc(-r.dL,-ref.dL):"",ref?cc(-r.lB,-ref.lB):"");
-    h+=rr2("Port",fm(r.dP,0)+"/d",fm(r.pB,0),"","red",ref?cc(-r.dP,-ref.dP):"",ref?cc(-r.pB,-ref.pB):"");
-    if(anyOH){h+=(r.oh>0)?rr("Off-hire bunk",fm(r.ohB,0),"red",ref&&ref.oh>0?cc(-r.ohB,-ref.ohB):""):rr("Off-hire bunk","","","");}
-    h+=rrh("Total Bunkers",fm(r.tB,0),"red b",ref?cc(-r.tB,-ref.tB):"");
+    h+=rr2("Ballast",fm(r.dB,0)+"/d",fm(r.bB,0),"mut","red",ref?cc(-r.dB,-ref.dB):"",ref?cc(-r.bB,-ref.bB):"");
+    h+=rr2("Laden",fm(r.dL,0)+"/d",fm(r.lB,0),"mut","red",ref?cc(-r.dL,-ref.dL):"",ref?cc(-r.lB,-ref.lB):"");
+    h+=rr2("Port",fm(r.dP,0)+"/d",fm(r.pB,0),"mut","red",ref?cc(-r.dP,-ref.dP):"",ref?cc(-r.pB,-ref.pB):"");
+    if(anyOH){h+=(r.oh>0)?rr3("Off-hire bunk",fm(r.ohB,0),"red",ref&&ref.oh>0?cc(-r.ohB,-ref.ohB):""):rr("Off-hire bunk","","","");}
+    h+=rrh3("Total Bunkers",fm(r.tB,0),"red b",ref?cc(-r.tB,-ref.tB):"");
     // Revenue
     h+='<div class="rsh">Vessel Gets (Net) \u2014 '+(r.dp?'DOP':'APS')+'</div>';
-    h+=rr2("Hire Revenue",fm(r.nH,0)+"/d",fm(r.hR,0),"","grn",ref?cc(r.nH,ref.nH):"",ref?cc(r.hR,ref.hR):"");
+    h+=rr2("Hire Revenue",fm(r.nH,0)+"/d",fm(r.hR,0),"mut","grn",ref?cc(r.nH,ref.nH):"",ref?cc(r.hR,ref.hR):"");
     if(anyAPS){
-      if(!r.dp){h+=rr2("BB (net comm)",fm(r.bb,0),fm(r.nBB,0),"","grn",ref&&!ref.dp?cc(r.bb,ref.bb):"",ref?cc(r.nBB,ref.nBB):"");
-        h+=rr("Ballast Bunk","("+fm(r.bB,0)+")","red",ref?cc(-r.bB,-ref.bB):"");}
+      if(!r.dp){h+=rr2("BB (net comm)",fm(r.bb,0)+' <span style="font-size:9px;color:var(--dim)">(gr)</span>',fm(r.nBB,0),"mut","grn",ref&&!ref.dp?cc(r.bb,ref.bb):"",ref?cc(r.nBB,ref.nBB):"");
+        h+=rr3("Ballast Bunk","("+fm(r.bB,0)+")","red",ref?cc(-r.bB,-ref.bB):"");}
       else{h+=rr("","","","");h+=rr("","","","");}
     }
-    if(anyOH){h+=(r.oh>0)?rr("Off-hire bunk","("+fm(r.ohB,0)+")","red",""):rr("Off-hire bunk","","","");}
-    h+=rrh("Net Voyage",fm(r.vN,0),"b",ref?cc(r.vN,ref.vN):"");
-    h+='<div class="rdv">'+rr("Charterer Pays",fm(r.cP,0),"mut b",ref?cc(r.cP,ref.cP):"")+'</div>';
+    if(anyOH){h+=(r.oh>0)?rr3("Off-hire bunk","("+fm(r.ohB,0)+")","red",""):rr("Off-hire bunk","","","");}
+    var nvCmp=ref?cc(r.vN,ref.vN):"";
+    h+='<div class="rr hl"><span class="rl">Net Voyage</span><span class="rv mut" style="flex:1;text-align:right">'+fD(r.tot)+'d</span><span class="rv b'+(nvCmp?" c"+nvCmp:"")+'" style="flex:1;text-align:right">'+fm(r.vN,0)+'</span></div>';
+    h+='<div class="rdv">'+rr2("Charterer Pays",fD(r.oH)+"d",fm(r.cP,0),"mut","mut b","",ref?cc(r.cP,ref.cP):"")+'</div>';
     // Intake
-    if(r.iv!==0){var iAdj=-r.iv;h+=rr("Intake "+(V[vi].intakeDelta>0?"+":"")+fm(V[vi].intakeDelta)+"MT",(iAdj>0?"+":"")+fm(iAdj,0),iAdj>0?"red":"grn","");h+=rrh("Adj. Chrt Pays",fm(r.aCP,0),"gld b",ref?cc(r.aCP,ref.aCP):"")}
+    if(r.iv!==0){var iAdj=-r.iv;h+=rr3("Intake "+(V[vi].intakeDelta>0?"+":"")+fm(V[vi].intakeDelta)+"MT",(iAdj>0?"+":"")+fm(iAdj,0),iAdj>0?"red":"grn","");h+=rrh3("Adj. Chrt Pays",fm(r.aCP,0),"gld b",ref?cc(r.aCP,ref.aCP):"")}
     if(multi){if(vi===0){for(var tv=1;tv<V.length;tv++){if(oi<V[tv].options.length){var d=r.aCP-aR[tv][oi].aCP;var dc=Math.abs(d)<1?"var(--dim)":(d>0?"var(--red)":"var(--green)");h+='<div class="dln" style="color:'+dc+'">\u0394 '+(Math.abs(d)<1?"matched":(d>0?"+"+fm(d):fm(d)))+'</div>';h+='<div class="mbtn" onclick="solveH('+tv+','+oi+',0,'+oi+')">Adjust hire \u2192 same CP as '+es(V[tv].name)+'</div>'}}}
     else{if(oi<aR[0].length){var d2=r.aCP-aR[0][oi].aCP;var dc2=Math.abs(d2)<1?"var(--dim)":(d2>0?"var(--red)":"var(--green)");h+='<div class="dln" style="color:'+dc2+'">\u0394 '+(Math.abs(d2)<1?"matched":(d2>0?"+"+fm(d2):fm(d2)))+'</div>';h+='<div class="mbtn" onclick="solveH(0,'+oi+','+vi+','+oi+')">Adjust hire \u2192 same CP as '+es(v0.name)+'</div>'}}}
+    // Eco=Full solver buttons
+    if(v.preset&&PR[v.preset]){
+      h+='<div style="display:flex;gap:4px;margin-top:6px">';
+      h+='<div class="mbtn" onclick="solveEF('+vi+','+oi+')" style="background:rgba(212,168,83,.08);border-color:rgba(212,168,83,.2);color:var(--gld);margin-top:0;flex:1">Calc Hire Eco\u2009=\u2009Full</div>';
+      h+='<div class="mbtn" onclick="solveBF('+vi+','+oi+')" style="background:rgba(212,168,83,.08);border-color:rgba(212,168,83,.2);color:var(--gld);margin-top:0;flex:1">Calc Bunk Eco\u2009=\u2009Full</div>';
+      h+='</div>';
+    }
     h+='</div>';
   }
 
@@ -304,16 +377,18 @@ function render(){
     h+='<div class="slb sdr sdrl">\u0394 best</div>';for(var k=0;k<fl.length;k++){var d=fl[k].r.gT-bst;h+='<div class="sv b sdr sdrv'+(d===0?" cup":" cdn")+'">'+(d===0?"\u2014":fm(d))+'</div>'}
     h+='</div></div></div>'}
 
-  h+='<div class="ftr">BB auto = (Hire \u2212 10,000) \u00d7 100</div>';
+  h+='<div class="ftr"></div>';
   document.getElementById("app").innerHTML=h;
 }
 
-function fld(l,v,f,vi,oi,cl,dec){var isV=VF.indexOf(f)>=0;var oc=isV?"openP('"+es(l)+"','"+f+"',"+v+","+vi+",0)":"openP('"+es(l)+"','"+f+"',"+v+","+vi+","+oi+")";return'<div class="f'+(cl?" "+cl:"")+'" onclick="'+oc+'"><div class="fl">'+l+'</div><div class="fv">'+(dec?fD(v):fm(v))+'</div></div>'}
-function fld2(l,v,f,vi,oi,cl){var oc="openP('"+es(l)+"','"+f+"',"+v+","+vi+",0)";return'<div class="f'+(cl?" "+cl:"")+'" onclick="'+oc+'"><div class="fl">'+l+'</div><div class="fv">'+f2(v)+'</div></div>'}
-function fldI(l,v,f,vi,oi){return'<div class="f" onclick="openP(\''+es(l)+'\',\''+f+'\','+v+','+vi+','+oi+')" style="flex:0;min-width:'+(l==="Port"?"90":"75")+'px;padding:5px 10px"><div class="fl" style="font-size:9px">'+l+'</div><div class="fv" style="font-size:17px">'+fD(v)+' d</div></div>'}
-function rr(l,v,c,cmp){return'<div class="rr"><span class="rl">'+l+'</span><span class="rv '+c+(cmp?" c"+cmp:"")+'">'+v+'</span></div>'}
+function fld(l,v,f,vi,oi,cl,dec){var isV=VF.indexOf(f)>=0;var oc=isV?"openP('"+es(l)+"','"+f+"',"+v+","+vi+",0)":"openP('"+es(l)+"','"+f+"',"+v+","+vi+","+oi+")";var np=isV?'data-np="'+es(l)+'" data-npf="'+f+'" data-npv="'+v+'" data-npvi="'+vi+'" data-npoi="0"':'data-np="'+es(l)+'" data-npf="'+f+'" data-npv="'+v+'" data-npvi="'+vi+'" data-npoi="'+oi+'"';return'<div class="f'+(cl?" "+cl:"")+'" onclick="'+oc+'" '+np+'><div class="fl">'+l+'</div><div class="fv">'+(dec?fD(v):fm(v))+'</div></div>'}
+function fld2(l,v,f,vi,oi,cl){var oc="openP('"+es(l)+"','"+f+"',"+v+","+vi+",0)";return'<div class="f'+(cl?" "+cl:"")+'" onclick="'+oc+'" data-np="'+es(l)+'" data-npf="'+f+'" data-npv="'+v+'" data-npvi="'+vi+'" data-npoi="0"><div class="fl">'+l+'</div><div class="fv">'+f2(v)+'</div></div>'}
+function fldI(l,v,f,vi,oi){return'<div class="f" onclick="openP(\''+es(l)+'\',\''+f+'\','+v+','+vi+','+oi+')" data-np="'+es(l)+'" data-npf="'+f+'" data-npv="'+v+'" data-npvi="'+vi+'" data-npoi="'+oi+'" style="flex:0;min-width:'+(l==="Port"?"90":"75")+'px;padding:5px 10px"><div class="fl" style="font-size:9px">'+l+'</div><div class="fv" style="font-size:17px">'+fD(v)+' d</div></div>'}
+function rr(l,v,c,cmp){return'<div class="rr"><span class="rl">'+l+'</span><span class="rv '+(c||"")+(cmp?" c"+cmp:"")+'" style="flex:1;text-align:right">'+v+'</span><span style="flex:1"></span></div>'}
 function rr2(l,v1,v2,c1,c2,cmp1,cmp2){cmp2=cmp2||"";return'<div class="rr"><span class="rl">'+l+'</span><span class="rv '+(c1||"")+(cmp1?" c"+cmp1:"")+'" style="flex:1;text-align:right">'+v1+'</span><span class="rv '+(c2||"")+(cmp2?" c"+cmp2:"")+'" style="flex:1;text-align:right">'+v2+'</span></div>'}
-function rrh(l,v,c,cmp){return'<div class="rr hl"><span class="rl">'+l+'</span><span class="rv '+c+(cmp?" c"+cmp:"")+'">'+v+'</span></div>'}
+function rrh(l,v,c,cmp){return'<div class="rr hl"><span class="rl">'+l+'</span><span class="rv '+c+(cmp?" c"+cmp:"")+'" style="flex:1;text-align:right">'+v+'</span><span style="flex:1"></span></div>'}
+function rrh3(l,v,c,cmp){return'<div class="rr hl"><span class="rl">'+l+'</span><span style="flex:1"></span><span class="rv '+c+(cmp?" c"+cmp:"")+'" style="flex:1;text-align:right">'+v+'</span></div>'}
+function rr3(l,v,c,cmp){return'<div class="rr"><span class="rl">'+l+'</span><span style="flex:1"></span><span class="rv '+(c||"")+(cmp?" c"+cmp:"")+'" style="flex:1;text-align:right">'+v+'</span></div>'}
 
 function addV(){if(V.length>=4)return;var s=V[0],no=s.options.map(function(o){return{name:o.name,hire:o.hire,bb:o.bb,bbOverride:o.bbOverride,bDist:o.bDist,lDist:o.lDist,portDays:o.portDays,offhire:o.offhire||0}});V.push({name:"Vessel_"+(V.length+1),vlsfo:900,commission:5,seaMargin:4,bSpeed:12,bCons:17,lSpeed:11.5,lCons:19.5,portCons:2.7,intakeShow:false,intakePrice:35,intakeDelta:0,dop:false,preset:null,ecoFull:"eco",p6Used:false,options:no});AT=V.length-1;render()}
 function remV(){if(V.length<2)return;V.pop();if(AT>=V.length)AT=V.length-1;render()}
@@ -483,6 +558,38 @@ function togTheme(){
 
 function doSave(){try{var html=document.documentElement.outerHTML;var nd="/*VS*/\nvar V="+JSON.stringify(V)+";\n/*VE*/";html=html.replace(/\/\*VS\*\/[\s\S]*?\/\*VE\*\//,nd);html="<!DOCTYPE html>\n"+html;var b=new Blob([html],{type:"text/html"}),u=URL.createObjectURL(b),a=document.createElement("a");var now=new Date();var yy=String(now.getFullYear()).slice(-2),mm=("0"+(now.getMonth()+1)).slice(-2),dd=("0"+now.getDate()).slice(-2),hh=("0"+now.getHours()).slice(-2),mi=("0"+now.getMinutes()).slice(-2);var ts=yy+mm+dd+"_"+hh+mi;a.href=u;a.download="TCE_"+(V[0].name||"calc").replace(/[^a-zA-Z0-9]/g,"_")+"_"+ts+".html";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}catch(e){alert("Save failed: "+e.message)}}
 if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});
+
+// Long-press numeric pad
+var lpTimer=null,lpEl=null,npField=null,npVi=0,npOi=0;
+document.addEventListener("touchstart",function(e){
+  var el=e.target.closest("[data-np]");
+  if(!el)return;
+  lpEl=el;
+  lpTimer=setTimeout(function(){
+    e.preventDefault();
+    npField=el.dataset.npf;npVi=+el.dataset.npvi;npOi=+el.dataset.npoi;
+    var cur=VF.indexOf(npField)>=0?V[npVi][npField]:V[npVi].options[npOi][npField];
+    if(npField==="bb")cur=gBB(V[npVi].options[npOi]);
+    document.getElementById("npadLbl").textContent=el.dataset.np;
+    var inp=document.getElementById("npadInp");
+    inp.value=cur;
+    document.getElementById("npad").classList.add("show");
+    setTimeout(function(){inp.focus();inp.select()},100);
+  },2000);
+},{passive:false});
+document.addEventListener("touchend",function(){clearTimeout(lpTimer);lpEl=null});
+document.addEventListener("touchmove",function(){clearTimeout(lpTimer);lpEl=null});
+document.getElementById("npadOk").addEventListener("click",function(){
+  var val=parseFloat(document.getElementById("npadInp").value);
+  if(isNaN(val))val=0;
+  if(VF.indexOf(npField)>=0)V[npVi][npField]=val;
+  else if(npField==="bb"){var op=V[npVi].options[npOi];if(Math.abs(val-aBB(op.hire))>.5){op.bb=val;op.bbOverride=true}else{op.bbOverride=false;op.bb=null}}
+  else V[npVi].options[npOi][npField]=val;
+  document.getElementById("npad").classList.remove("show");render();
+});
+document.getElementById("npadCc").addEventListener("click",function(){document.getElementById("npad").classList.remove("show")});
+document.getElementById("npad").addEventListener("click",function(e){if(e.target===this)this.classList.remove("show")});
+document.getElementById("npadInp").addEventListener("keydown",function(e){if(e.key==="Enter"){document.getElementById("npadOk").click()}});
 US=[];RS=[];render();
 </script>
 </body>
