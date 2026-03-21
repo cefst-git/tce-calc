@@ -110,31 +110,14 @@ html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,system
 .wmt.t{top:0;background:linear-gradient(#2a2a2e,transparent)}.wmt.b{bottom:0;background:linear-gradient(to top,#2a2a2e,transparent)}
 .pdot{font-size:28px;font-weight:700;color:var(--gld);align-self:center;padding:0 1px}
 .ftr{text-align:center;font-size:10px;color:var(--dim2);padding:14px 0}
-.npad{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1001;display:none;align-items:center;justify-content:center;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
-.npad.show{display:flex}
-.npad-box{background:#2a2a2e;border-radius:12px;padding:16px;width:280px;text-align:center}
-body.light .npad-box{background:#f0efe8}
-.npad-lbl{font-size:12px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
-.npad-inp{width:100%;font-size:28px;font-weight:700;font-family:ui-monospace,monospace;text-align:center;background:var(--c1);border:2px solid var(--gld);border-radius:8px;color:var(--txt);padding:10px;outline:none;-webkit-appearance:none;appearance:none}
-.npad-hint{font-size:10px;color:var(--dim);margin-top:4px}
-.npad-btns{display:flex;gap:8px;margin-top:12px}
-.npad-btns button{flex:1;padding:10px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;border:none}
-.npad-ok{background:rgba(212,168,83,.15);color:var(--gld)}
-.npad-cc{background:rgba(255,255,255,.06);color:var(--dim)}
 </style>
 </head>
 <body>
 <div class="app" id="app"></div>
 <div class="pov" id="pov"><div class="psh">
-<div class="phd"><button class="pcn" id="pcn">Cancel</button><div class="ptt" id="ptt">Edit</div><button class="pdn" id="pdn">Done</button></div>
+<div class="phd"><button class="pcn" id="pcn">Cancel</button><div class="ptt" id="ptt">Edit</div><button class="pdn" id="p123" style="font-size:13px;color:var(--green);font-weight:600">123</button><button class="pdn" id="pdn">Done</button></div>
 <div class="ppv" id="ppv">0</div>
 <div class="pbd" id="pbd"></div>
-</div></div>
-<div class="npad" id="npad"><div class="npad-box">
-<div class="npad-lbl" id="npadLbl">Edit</div>
-<input class="npad-inp" id="npadInp" type="number" inputmode="decimal" autocomplete="off">
-<div class="npad-hint">Tap number to edit</div>
-<div class="npad-btns"><button class="npad-cc" id="npadCc">Cancel</button><button class="npad-ok" id="npadOk">OK</button></div>
 </div></div>
 <script>
 /*VS*/
@@ -561,42 +544,19 @@ function togTheme(){
 function doSave(){try{var html=document.documentElement.outerHTML;var nd="/*VS*/\nvar V="+JSON.stringify(V)+";\n/*VE*/";html=html.replace(/\/\*VS\*\/[\s\S]*?\/\*VE\*\//,nd);html="<!DOCTYPE html>\n"+html;var b=new Blob([html],{type:"text/html"}),u=URL.createObjectURL(b),a=document.createElement("a");var now=new Date();var yy=String(now.getFullYear()).slice(-2),mm=("0"+(now.getMonth()+1)).slice(-2),dd=("0"+now.getDate()).slice(-2),hh=("0"+now.getHours()).slice(-2),mi=("0"+now.getMinutes()).slice(-2);var ts=yy+mm+dd+"_"+hh+mi;a.href=u;a.download="TCE_"+(V[0].name||"calc").replace(/[^a-zA-Z0-9]/g,"_")+"_"+ts+".html";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}catch(e){alert("Save failed: "+e.message)}}
 if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});
 
-// Swipe-right numeric pad
-var npField=null,npVi=0,npOi=0;
-var swStartX=0,swStartY=0,swEl=null;
-document.addEventListener("touchstart",function(e){
-  var el=e.target.closest("[data-np]");
-  if(!el){swEl=null;return}
-  swEl=el;swStartX=e.touches[0].clientX;swStartY=e.touches[0].clientY;
-},{passive:true});
-document.addEventListener("touchend",function(e){
-  if(!swEl)return;
-  var dx=e.changedTouches[0].clientX-swStartX;
-  var dy=Math.abs(e.changedTouches[0].clientY-swStartY);
-  if(dx>60&&dy<40){
-    // Swipe right detected
-    var el=swEl;swEl=null;
-    npField=el.dataset.npf;npVi=+el.dataset.npvi;npOi=+el.dataset.npoi;
-    var cur=VF.indexOf(npField)>=0?V[npVi][npField]:V[npVi].options[npOi][npField];
-    if(npField==="bb")cur=gBB(V[npVi].options[npOi]);
-    document.getElementById("npadLbl").textContent=el.dataset.np;
-    var inp=document.getElementById("npadInp");
-    inp.value=cur;
-    document.getElementById("npad").classList.add("show");
-  }
-  swEl=null;
-},{passive:true});
-document.getElementById("npadOk").addEventListener("click",function(){
-  var val=parseFloat(document.getElementById("npadInp").value);
-  if(isNaN(val))val=0;
-  if(VF.indexOf(npField)>=0)V[npVi][npField]=val;
-  else if(npField==="bb"){var op=V[npVi].options[npOi];if(Math.abs(val-aBB(op.hire))>.5){op.bb=val;op.bbOverride=true}else{op.bbOverride=false;op.bb=null}}
-  else V[npVi].options[npOi][npField]=val;
-  document.getElementById("npad").classList.remove("show");render();
+// 123 button - type value directly
+document.getElementById("p123").addEventListener("click",function(){
+  var val=rdVal();if(PK.neg)val=-val;
+  var input=prompt(document.getElementById("ptt").textContent,val);
+  if(input===null)return;
+  var nv=parseFloat(input);if(isNaN(nv))return;
+  if(PK.neg&&nv>0)nv=-nv;
+  var f=PK.field,vi=PK.vi,oi=PK.oi;
+  if(VF.indexOf(f)>=0)V[vi][f]=nv;
+  else if(f==="bb"){var op=V[vi].options[oi];if(Math.abs(nv-aBB(op.hire))>.5){op.bb=nv;op.bbOverride=true}else{op.bbOverride=false;op.bb=null}}
+  else V[vi].options[oi][f]=nv;
+  document.getElementById("pov").classList.remove("show");render();
 });
-document.getElementById("npadCc").addEventListener("click",function(){document.getElementById("npad").classList.remove("show")});
-document.getElementById("npad").addEventListener("click",function(e){if(e.target===this)this.classList.remove("show")});
-document.getElementById("npadInp").addEventListener("keydown",function(e){if(e.key==="Enter"){document.getElementById("npadOk").click()}});
 US=[];RS=[];render();
 </script>
 </body>
