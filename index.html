@@ -559,14 +559,16 @@ function togTheme(){
 function doSave(){try{var html=document.documentElement.outerHTML;var nd="/*VS*/\nvar V="+JSON.stringify(V)+";\n/*VE*/";html=html.replace(/\/\*VS\*\/[\s\S]*?\/\*VE\*\//,nd);html="<!DOCTYPE html>\n"+html;var b=new Blob([html],{type:"text/html"}),u=URL.createObjectURL(b),a=document.createElement("a");var now=new Date();var yy=String(now.getFullYear()).slice(-2),mm=("0"+(now.getMonth()+1)).slice(-2),dd=("0"+now.getDate()).slice(-2),hh=("0"+now.getHours()).slice(-2),mi=("0"+now.getMinutes()).slice(-2);var ts=yy+mm+dd+"_"+hh+mi;a.href=u;a.download="TCE_"+(V[0].name||"calc").replace(/[^a-zA-Z0-9]/g,"_")+"_"+ts+".html";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}catch(e){alert("Save failed: "+e.message)}}
 if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});
 
-// Long-press numeric pad
-var lpTimer=null,lpEl=null,npField=null,npVi=0,npOi=0;
-document.addEventListener("touchstart",function(e){
+// Double-tap numeric pad
+var lastTap=0,lastTapEl=null,npField=null,npVi=0,npOi=0;
+document.addEventListener("click",function(e){
   var el=e.target.closest("[data-np]");
   if(!el)return;
-  lpEl=el;
-  lpTimer=setTimeout(function(){
-    e.preventDefault();
+  var now=Date.now();
+  if(lastTapEl===el&&now-lastTap<400){
+    // Double tap detected - close wheel picker if open, open numpad
+    e.preventDefault();e.stopPropagation();
+    document.getElementById("pov").classList.remove("show");
     npField=el.dataset.npf;npVi=+el.dataset.npvi;npOi=+el.dataset.npoi;
     var cur=VF.indexOf(npField)>=0?V[npVi][npField]:V[npVi].options[npOi][npField];
     if(npField==="bb")cur=gBB(V[npVi].options[npOi]);
@@ -575,10 +577,11 @@ document.addEventListener("touchstart",function(e){
     inp.value=cur;
     document.getElementById("npad").classList.add("show");
     setTimeout(function(){inp.focus();inp.select()},100);
-  },2000);
-},{passive:false});
-document.addEventListener("touchend",function(){clearTimeout(lpTimer);lpEl=null});
-document.addEventListener("touchmove",function(){clearTimeout(lpTimer);lpEl=null});
+    lastTap=0;lastTapEl=null;
+    return;
+  }
+  lastTap=now;lastTapEl=el;
+},true);
 document.getElementById("npadOk").addEventListener("click",function(){
   var val=parseFloat(document.getElementById("npadInp").value);
   if(isNaN(val))val=0;
