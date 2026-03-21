@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCE Voyage Comparison Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--gld:#d4a853;--gld2:#e8c877;--bg:#1a1a1e;--bg2:rgba(255,255,255,.03);--bg3:rgba(255,255,255,.06);--brd:rgba(255,255,255,.08);--brd2:rgba(255,255,255,.12);--txt:#e8e6e1;--txt2:#fff;--dim:rgba(255,255,255,.4);--dim2:rgba(255,255,255,.2);--dim3:rgba(255,255,255,.06);--dim4:rgba(255,255,255,.5);--dim5:rgba(255,255,255,.6);--dim6:rgba(255,255,255,.35);--grn:rgba(129,178,154,.12);--grn-b:rgba(129,178,154,.2);--orn:rgba(224,122,95,.1);--orn-b:rgba(224,122,95,.18);--red:#e07a5f;--green:#81b29a;--sel:rgba(212,168,83,.3);--gld-bg:rgba(212,168,83,.15);--gld-brd:rgba(212,168,83,.3);--gld-bg2:rgba(212,168,83,.08);--gld-bg3:rgba(212,168,83,.05);--gld-bg4:rgba(212,168,83,.12);--card-best-brd:rgba(212,168,83,.25);--spin:.3}
+body.light{--gld:#9a7b2e;--gld2:#b8922e;--bg:#f4f3f0;--bg2:rgba(0,0,0,.02);--bg3:rgba(0,0,0,.04);--brd:rgba(0,0,0,.1);--brd2:rgba(0,0,0,.15);--txt:#1a1a1e;--txt2:#111;--dim:rgba(0,0,0,.4);--dim2:rgba(0,0,0,.15);--dim3:rgba(0,0,0,.04);--dim4:rgba(0,0,0,.5);--dim5:rgba(0,0,0,.6);--dim6:rgba(0,0,0,.35);--grn:rgba(26,122,76,.08);--grn-b:rgba(26,122,76,.18);--orn:rgba(192,57,43,.06);--orn-b:rgba(192,57,43,.14);--red:#c0392b;--green:#1a7a4c;--sel:rgba(212,168,83,.2);--gld-bg:rgba(212,168,83,.1);--gld-brd:rgba(180,140,50,.3);--gld-bg2:rgba(212,168,83,.06);--gld-bg3:rgba(212,168,83,.04);--gld-bg4:rgba(212,168,83,.08);--card-best-brd:rgba(180,140,50,.35);--spin:.5}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;padding:16px 12px;min-height:100vh;font-size:12px;transition:background .3s,color .3s}
+::selection{background:var(--sel)}
+input[type=number]::-webkit-inner-spin-button{opacity:var(--spin)}
+.wrap{max-width:1400px;margin:0 auto}
+.header{display:flex;justify-content:space-between;align-items:flex-start}
+.header-left h1{font-size:20px;font-weight:700;letter-spacing:-.02em;display:inline;background:linear-gradient(135deg,var(--gld),var(--gld2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header-right{display:flex;gap:8px;align-items:center}
+.hline{height:1px;background:linear-gradient(90deg,var(--gld),transparent);margin-top:8px;margin-bottom:14px}
+.btn-act{background:var(--gld-bg);border:1px solid var(--gld-brd);color:var(--gld);border-radius:4px;padding:5px 11px;font-size:12px;cursor:pointer;font-weight:600;font-family:inherit;display:flex;align-items:center;gap:4px;transition:background .15s}
+.btn-act:hover{background:var(--gld-bg4)}
+.btn-act svg{width:13px;height:13px}
+.save-flash{color:var(--green)!important;border-color:var(--grn-b)!important;background:var(--grn)!important}
+.card{background:var(--bg2);border:1px solid var(--brd);border-radius:6px;padding:10px;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:600;color:var(--gld);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.inp{width:100%;background:var(--bg3);border:1px solid var(--brd2);border-radius:3px;color:var(--txt);padding:4px 26px 4px 6px;font-size:14px;font-family:'JetBrains Mono',monospace;text-align:right;outline:none}
+.inp:focus{border-color:var(--gld);background:var(--gld-bg2)}
+.inp.val-up{background:var(--grn);border-color:var(--grn-b)}.inp.val-down{background:var(--orn);border-color:var(--orn-b)}
+.inp.matched{border-color:var(--red)!important;box-shadow:0 0 0 1px rgba(224,122,95,.3)}
+.inp-text{text-align:left;padding-right:6px}.inp-center{text-align:center;font-weight:600;font-size:12px}
+label.lbl{font-size:10px;color:var(--dim);margin-bottom:2px;display:block}
+.speed-grid{display:grid;grid-template-columns:50px 1fr 1fr;gap:4px 6px;align-items:center}
+.speed-hdr{font-size:10px;color:var(--dim);text-align:center}
+.speed-lbl{font-size:11px;color:var(--dim5)}
+.btn-add,.btn-addv{background:var(--gld-bg);border:1px solid var(--gld-brd);color:var(--gld);border-radius:3px;padding:3px 8px;font-size:11px;cursor:pointer;font-weight:600;font-family:inherit}
+.btn-add:hover,.btn-addv:hover{background:var(--gld-bg4)}
+.btn-del{background:none;border:none;color:var(--dim2);cursor:pointer;font-size:18px;padding:0 3px;line-height:1}
+.btn-del:hover{color:var(--red)}
+.btn-delv{background:none;border:1px solid rgba(224,122,95,.25);color:rgba(224,122,95,.6);cursor:pointer;font-size:11px;padding:2px 8px;border-radius:4px;font-family:inherit;font-weight:500}
+.btn-delv:hover{background:var(--orn);color:var(--red)}
+.btn-copy{background:var(--dim3);border:1px solid var(--brd2);color:var(--dim4);border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:500;transition:all .15s;white-space:nowrap}
+.btn-copy:hover{background:var(--gld-bg4);color:var(--gld);border-color:var(--gld-brd)}
+.btn-preset{background:var(--grn);border:1px solid var(--grn-b);color:var(--green);border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap}
+.btn-preset.btn-sm{font-size:9px;padding:2px 5px}
+.btn-preset:hover{background:rgba(129,178,154,.18)}
+.btn-preset.pressed,.btn-copy.pressed,.btn-add.pressed,.btn-addv.pressed{border-color:var(--red)!important}
+.eco-full{display:inline-flex;border-radius:4px;overflow:hidden;border:1px solid var(--brd2);font-size:9px;font-weight:600;text-transform:uppercase}
+.eco-full button{background:var(--dim3);color:var(--dim);border:none;padding:1px 6px;cursor:pointer;font-family:inherit;font-size:9px;font-weight:600;text-transform:uppercase}
+.eco-full button.on{background:var(--gld-bg);color:var(--gld)}
+.btn-flash{animation:bflash .8s ease-out}
+@keyframes bflash{0%{border-color:var(--red);box-shadow:0 0 6px rgba(224,122,95,.3)}100%{border-color:inherit;box-shadow:none}}
+.btn-match{background:var(--grn);border:1px solid var(--grn-b);color:var(--green);border-radius:3px;padding:4px 8px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s;white-space:nowrap;width:100%;margin-top:3px}
+.btn-match:hover{background:rgba(129,178,154,.2)}
+.btn-match-flash{background:var(--gld-bg)!important;border-color:var(--gld-brd)!important;color:var(--gld)!important}
+.intake-toggle{background:var(--dim3);border:1px solid var(--brd2);color:var(--dim);border-radius:3px;padding:3px 8px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:500;white-space:nowrap}
+.intake-toggle:hover{background:var(--gld-bg4);color:var(--gld)}
+.intake-toggle.on{background:var(--gld-bg4);color:var(--gld);border-color:var(--gld-brd)}
+.aps-dop{display:inline-flex;border-radius:4px;overflow:hidden;border:1px solid var(--brd2);font-size:10px;font-weight:600}
+.aps-dop button{background:var(--dim3);color:var(--dim);border:none;padding:2px 8px;cursor:pointer;font-family:inherit;font-size:10px;font-weight:600}
+.aps-dop button.on{background:var(--gld-bg);color:var(--gld)}
+.nom-about button.on[data-setnomabout="about"]{background:var(--orn);color:var(--gld)}
+.intake-row{display:grid;grid-template-columns:40px 1fr 40px 1fr;gap:2px 5px;align-items:center;margin-top:4px}
+.bb-wrap{position:relative}
+.bb-auto{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:8px;color:var(--gld);opacity:.5;pointer-events:none;text-transform:uppercase}
+.bb-reset{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--dim6);cursor:pointer;background:none;border:none;padding:2px 4px}
+.bb-reset:hover{color:var(--gld)}
+.u-wrap{position:relative}.u-lbl{position:absolute;right:17px;top:50%;transform:translateY(-50%);font-size:8px;color:var(--dim);pointer-events:none;font-family:'IBM Plex Sans',sans-serif}
+.vessel-col{min-width:0}
+.vessel-header{margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--gld-bg)}
+.vname-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.vname-inp{font-size:18px;font-weight:700;color:var(--txt2);font-family:inherit;background:transparent;border:1px solid transparent;padding:2px 6px;outline:none;width:150px}
+.vname-inp:focus{border-color:var(--gld-brd)}
+.vparam{display:flex;gap:4px;align-items:center}
+.vparam-lbl{font-size:9px;color:var(--dim);white-space:nowrap}
+.vparam-inp{width:80px;font-size:13px;padding:2px 20px 2px 4px}
+.sec-hdr-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:4px;flex-wrap:wrap}
+.opt-lbl{font-size:11px;color:var(--dim4);align-self:center;white-space:nowrap}
+
+/* Results */
+.results-pair{display:flex;gap:10px;margin-bottom:12px;align-items:stretch}
+.results-pair>.res-col{flex:1;min-width:0}
+.res-card{padding:10px;border-radius:6px}
+.res-card.best{background:var(--gld-bg3);border:1px solid var(--card-best-brd)}
+.res-card.normal{background:var(--bg2);border:1px solid var(--brd)}
+.res-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.res-name{display:flex;flex-direction:column}
+.res-vname{font-size:17px;font-weight:700;color:var(--txt2);line-height:1.2}
+.res-oname{font-size:14px;font-weight:600;color:var(--dim5);line-height:1.2}
+.badge-best{font-size:9px;font-weight:700;color:var(--bg);background:var(--gld);padding:1px 5px;border-radius:2px;text-transform:uppercase;margin-left:4px}
+.tce-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;text-align:right}
+.tce-value{font-size:21px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--gld);line-height:1;text-align:right}
+.tce-gross{font-size:12px;color:var(--dim6);font-family:'JetBrains Mono',monospace;text-align:right}
+.sec-head{font-size:10px;font-weight:600;color:var(--dim6);text-transform:uppercase;letter-spacing:.06em;margin:7px 0 3px;padding-bottom:2px;border-bottom:1px solid var(--dim3)}
+.r-row{display:grid;grid-template-columns:80px 1fr 1fr;gap:2px;padding:2px 0;align-items:center}
+.r-row.bordered{border-bottom:1px solid var(--brd)}
+.r-row.highlight{background:var(--gld-bg2)}
+.r-label{font-size:11px;color:var(--dim5);font-weight:500}
+.r-val{font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--txt);text-align:right;padding:0 2px}
+.r-val.sm{font-size:11px;color:var(--dim)}
+.r-val.bold{font-weight:700}.r-val.gold{color:var(--gld)}.r-val.red{color:var(--red)}.r-val.green{color:var(--green)}.r-val.muted{color:var(--dim4)}
+.r-val.cmp-up{background:var(--grn);border-radius:2px}.r-val.cmp-down{background:var(--orn);border-radius:2px}
+.tce-cmp-up{background:var(--grn);border-radius:3px;padding:1px 4px}
+.tce-cmp-down{background:var(--orn);border-radius:3px;padding:1px 4px}
+.divider{margin-top:4px;border-top:1px solid var(--gld-bg);padding-top:4px}
+.delta-line{font-size:9px;font-family:'JetBrains Mono',monospace;text-align:right;margin-top:2px}
+
+.summary-label{font-size:11px;color:var(--dim4)}
+.summary-val{font-size:13px;font-family:'JetBrains Mono',monospace;text-align:center;color:var(--txt);padding:1px 3px}
+.summary-val.bold{font-weight:700}
+.summary-val.cmp-up{background:var(--grn);border-radius:2px}
+.summary-val.cmp-down{background:var(--orn);border-radius:2px}
+.delta-row{border-top:1px solid var(--brd);padding-top:4px;margin-top:3px}
+.footer{text-align:center;margin-top:14px;font-size:11px;color:var(--dim2)}
+#imgSection{display:none;margin-bottom:14px}
+#imgSection.show{display:block}
+#imgSection img{width:100%;max-width:852px;border-radius:6px;border:1px solid var(--brd)}
+#imgSection .img-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+#imgSection .fname{color:var(--dim);font-size:10px}
+#imgSection .img-close{background:none;border:1px solid rgba(224,122,95,.25);color:rgba(224,122,95,.6);font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit}
+#imgSection .img-close:hover{color:var(--red);background:var(--orn)}
+.drop-zone{position:fixed;inset:0;background:var(--gld-bg4);border:3px dashed var(--gld);z-index:8888;display:none;align-items:center;justify-content:center;pointer-events:none}
+.drop-zone.show{display:flex}
+.drop-zone span{font-size:20px;font-weight:700;color:var(--gld)}
+/* Theme toggle */
+.theme-toggle{background:var(--dim3);border:1px solid var(--brd2);color:var(--dim);border-radius:4px;padding:5px 8px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:3px;font-size:12px}
+.theme-toggle:hover{border-color:var(--gld-brd);color:var(--gld)}
+.save-wrap{position:relative;display:inline-flex}
+.save-menu{display:none;position:absolute;top:100%;right:0;margin-top:4px;background:var(--bg);border:1px solid var(--brd2);border-radius:6px;overflow:hidden;z-index:100;min-width:140px;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.save-wrap.open .save-menu{display:block}
+.save-menu button{display:block;width:100%;text-align:left;padding:8px 12px;font-size:11px;font-weight:500;font-family:inherit;background:none;border:none;color:var(--txt);cursor:pointer}
+.save-menu button:hover{background:var(--gld-bg4);color:var(--gld)}
+.save-menu button+button{border-top:1px solid var(--brd)}
+@media(max-width:900px){.vessels-row,.results-pair{flex-direction:column!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="header-left"><h1>TCE Voyage Comparison</h1></div>
+    <div class="header-right">
+      <button class="theme-toggle" id="btnTheme" title="Toggle theme"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>
+      <button class="btn-act theme-toggle" id="btnUndo" title="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a5 5 0 015 5v0a5 5 0 01-5 5H8"/><polyline points="7 14 3 10 7 6"/></svg></button>
+      <button class="btn-act theme-toggle" id="btnRedo" title="Redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10H11a5 5 0 00-5 5v0a5 5 0 005 5h5"/><polyline points="17 14 21 10 17 6"/></svg></button>
+      <div class="save-wrap" id="saveWrap">
+        <button class="btn-act" id="btnSave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save</button>
+        <div class="save-menu"><button id="saveEdit">Save (editable)</button><button id="saveRO">Save (read-only)</button></div>
+      </div>
+      <button class="btn-act theme-toggle" id="btnPdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>PDF</button>
+    </div>
+  </div>
+  <div class="hline"></div>
+  <div id="vesselsContainer"></div>
+  <div id="resultsContainer"></div>
+  <div id="summaryContainer"></div>
+  <div id="imgSection"><div class="img-bar"><span class="fname" id="imgName"></span><button class="img-close" id="imgClose">&times; Remove</button></div><img id="imgView" src=""></div>
+</div>
+<div class="drop-zone" id="dropZone"><span>Drop image here</span></div>
+<script>
+/*VESSELS_START*/
+var vessels=[
+  {name:"Trikeri",vlsfo:900,commission:5,seaMargin:4,bSpeed:12,bCons:17,lSpeed:11.5,lCons:19.5,portCons:2.7,intakeShow:false,intakePrice:35,intakeDelta:0,dop:false,preset:null,ecoFull:"eco",p6Used:false,
+   options:[
+     {name:"PMO",hire:18250,bb:null,bbOverride:false,bDist:7850,lDist:8050,portDays:15,offhire:0}
+   ]}
+];
+/*VESSELS_END*/
+var undoStack=[],redoStack=[],undoing=false;
+var isAbout=false;
+function saveUndo(){if(undoing)return;undoStack.push(JSON.stringify(vessels));if(undoStack.length>30)undoStack.shift();redoStack=[]}
+function doUndo(){if(undoStack.length<2)return;undoing=true;redoStack.push(undoStack.pop());vessels=JSON.parse(undoStack[undoStack.length-1]);renderVessels();renderResults();undoing=false}
+function doRedo(){if(redoStack.length<1)return;undoing=true;var s=redoStack.pop();undoStack.push(s);vessels=JSON.parse(s);renderVessels();renderResults();undoing=false}
+// Wrap renderAll to auto-save undo
+var _origRenderAll;
+function renderAll(){saveUndo();renderVessels();renderResults()}
+
+function autoBB(h){return(h-10000)*100}
+function getBB(o){return o.bbOverride?o.bb:autoBB(o.hire)}
+function fmt(n,d){d=d||0;if(n==null||isNaN(n))return"\u2014";return Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fmtD(n){return(n==null||isNaN(n))?"\u2014":Number(n).toFixed(1)}
+function fmtD2(n){return(n==null||isNaN(n))?"\u2014":Number(n).toFixed(2)}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}
+function intakeVal(v){return(v.intakeShow&&v.intakeDelta&&v.intakePrice)?(v.intakeDelta*v.intakePrice):0}
+
+var PRESETS={
+  bki:{name:"Tess82",portCons:3.5,eco:{bSpeed:12.5,bCons:23,lSpeed:11.5,lCons:22},full:{bSpeed:14,bCons:31,lSpeed:13.5,lCons:33}},
+  sungd:{name:"Sungdong_81",portCons:4,eco:{bSpeed:12.25,bCons:22,lSpeed:12,lCons:24.5},full:{bSpeed:14,bCons:29.75,lSpeed:13,lCons:30.25}},
+  dacks:{name:"Dacks_82",portCons:3.5,eco:{bSpeed:12.5,bCons:18,lSpeed:11.5,lCons:19.5},full:{bSpeed:14,bCons:24,lSpeed:13.5,lCons:28.5}}
+};
+function applyPreset(vi,key){
+  var v=vessels[vi],p=PRESETS[key],m=v.ecoFull||"eco",s=p[m];
+  v.preset=key;v.name=p.name;v.portCons=p.portCons;
+  v.bSpeed=s.bSpeed;v.bCons=s.bCons;v.lSpeed=s.lSpeed;v.lCons=s.lCons;
+  renderAll();
+}
+function toggleEcoFull(vi){
+  var v=vessels[vi];v.ecoFull=(v.ecoFull==="eco")?"full":"eco";
+  if(v.preset&&PRESETS[v.preset]){var s=PRESETS[v.preset][v.ecoFull];v.bSpeed=s.bSpeed;v.bCons=s.bCons;v.lSpeed=s.lSpeed;v.lCons=s.lCons}
+  renderAll();
+}
+
+function solveEcoFull(vi,oi){
+  var v=vessels[vi],p=v.preset?PRESETS[v.preset]:null;
+  if(!p)return;
+  var opt=v.options[oi],comm=v.commission/100,sm=1+v.seaMargin/100,vlsfo=v.vlsfo,isDop=!!v.dop;
+  var eS=p.eco,fS=p.full;
+  var bD_e=(opt.bDist/(eS.bSpeed*24))*sm,lD_e=(opt.lDist/(eS.lSpeed*24))*sm;
+  var bD_f=(opt.bDist/(fS.bSpeed*24))*sm,lD_f=(opt.lDist/(fS.lSpeed*24))*sm;
+  var newHire;
+  if(isDop){
+    var numr=vlsfo*(bD_f*fS.bCons+lD_f*fS.lCons-bD_e*eS.bCons-lD_e*eS.lCons);
+    var denm=(1-comm)*(bD_e+lD_e-bD_f-lD_f);
+    if(Math.abs(denm)<0.001)return;
+    newHire=Math.round(numr/denm);
+  }else{
+    var numr=vlsfo*(lD_f*fS.lCons-lD_e*eS.lCons);
+    var denm=(1-comm)*(lD_e-lD_f);
+    if(Math.abs(denm)<0.001)return;
+    newHire=Math.round(numr/denm);
+  }
+  var oldHire=opt.hire,oldBB=opt.bb,oldBBO=opt.bbOverride;
+  opt.hire=newHire;opt.bbOverride=false;opt.bb=null;
+  renderAll();
+  flashRevert(function(){opt.hire=oldHire;opt.bb=oldBB;opt.bbOverride=oldBBO;renderAll()},
+    'input[data-vi="'+vi+'"][data-oi="'+oi+'"][data-of="hire"]');
+}
+
+function solveBunkEcoFull(vi,oi){
+  var v=vessels[vi],p=v.preset?PRESETS[v.preset]:null;
+  if(!p)return;
+  var opt=v.options[oi],comm=v.commission/100,sm=1+v.seaMargin/100,isDop=!!v.dop;
+  var eS=p.eco,fS=p.full;
+  var bD_e=(opt.bDist/(eS.bSpeed*24))*sm,lD_e=(opt.lDist/(eS.lSpeed*24))*sm;
+  var bD_f=(opt.bDist/(fS.bSpeed*24))*sm,lD_f=(opt.lDist/(fS.lSpeed*24))*sm;
+  var newBunk;
+  if(isDop){
+    var numr=opt.hire*(1-comm)*(bD_e+lD_e-bD_f-lD_f);
+    var denm=(bD_f*fS.bCons+lD_f*fS.lCons)-(bD_e*eS.bCons+lD_e*eS.lCons);
+    if(Math.abs(denm)<0.001)return;
+    newBunk=Math.round(numr/denm);
+  }else{
+    var numr=opt.hire*(1-comm)*(lD_e-lD_f);
+    var denm=(lD_f*fS.lCons)-(lD_e*eS.lCons);
+    if(Math.abs(denm)<0.001)return;
+    newBunk=Math.round(numr/denm);
+  }
+  var oldBunk=v.vlsfo;
+  v.vlsfo=newBunk;
+  renderAll();
+  flashRevert(function(){v.vlsfo=oldBunk;renderAll()},
+    'input[data-vi="'+vi+'"][data-vf="vlsfo"]');
+}
+
+function flashRevert(revertFn,selector){
+  var el=document.querySelector(selector);
+  if(el){
+    var wrap=el.closest('.u-wrap')||el.closest('.bb-wrap')||el.parentElement;
+    var count=0;
+    var iv=setInterval(function(){
+      wrap.style.background=(count%2===0)?'rgba(212,168,83,.25)':'rgba(224,122,95,.2)';
+      wrap.style.borderRadius='4px';
+      count++;
+      if(count>=12){clearInterval(iv);wrap.style.background=''}
+    },500);
+  }
+  setTimeout(function(){revertFn()},6000);
+}
+
+function calc(opt,v){
+  var vlsfo=v.vlsfo,comm=v.commission/100,sm=1+v.seaMargin/100,isDop=!!v.dop;
+  var bb=isDop?0:getBB(opt);
+  var bSpd=v.bSpeed,lSpd=v.lSpeed,bCn=v.bCons,lCn=v.lCons;
+  if(isAbout){bSpd=Math.max(0.1,bSpd-0.5);lSpd=Math.max(0.1,lSpd-0.5);bCn=bCn*1.05;lCn=lCn*1.05}
+  var bD=(opt.bDist/(bSpd*24))*sm,lD=(opt.lDist/(lSpd*24))*sm,pD=opt.portDays,oh=opt.offhire||0;
+  var onH=isDop?(bD+lD+pD):(lD+pD),tot=bD+lD+pD+oh;
+  var dBB=bCn*vlsfo,dLB=lCn*vlsfo,dPB=v.portCons*vlsfo;
+  var bB=bD*dBB,lB=lD*dLB,pB=pD*dPB,ohB=oh*dPB,tB=bB+lB+pB+ohB;
+  var nH=opt.hire*(1-comm),nBB=isDop?0:(bb*(1-comm)),hR=onH*nH;
+  var vN=isDop?(hR-ohB):(hR+nBB-bB-ohB),nTCE=vN/tot,gTCE=nTCE/(1-comm);
+  var cP=isDop?(hR+tB-ohB):(hR+nBB+lB+pB);
+  var iV=intakeVal(v),adjCP=cP-iV;
+  return{bD:bD,lD:lD,pD:pD,oh:oh,ohB:ohB,onH:onH,tot:tot,dBB:dBB,dLB:dLB,dPB:dPB,bB:bB,lB:lB,pB:pB,tB:tB,nH:nH,nBB:nBB,bb:bb,hR:hR,vN:vN,nTCE:nTCE,gTCE:gTCE,cP:cP,iV:iV,adjCP:adjCP,isDop:isDop}
+}
+
+function solveHire(srcVi,srcOi,tgtVi,tgtOi){
+  var vs=vessels[srcVi],vt=vessels[tgtVi];
+  var rs=calc(vs.options[srcOi],vs);
+  var targetAdjCP=rs.adjCP,tgtIV=intakeVal(vt),targetCP=targetAdjCP+tgtIV;
+  var comm=vt.commission/100,sm=1+vt.seaMargin/100;
+  var opt=vt.options[tgtOi];
+  var bSpd=vt.bSpeed,lSpd=vt.lSpeed,bCn=vt.bCons,lCn=vt.lCons;
+  if(isAbout){bSpd=Math.max(0.1,bSpd-0.5);lSpd=Math.max(0.1,lSpd-0.5);bCn=bCn*1.05;lCn=lCn*1.05}
+  var bD=(opt.bDist/(bSpd*24))*sm,lD=(opt.lDist/(lSpd*24))*sm,pD=opt.portDays;
+  var lB=lD*lCn*vt.vlsfo;
+  if(vt.dop){
+    var onH=bD+lD+pD,bB=bD*bCn*vt.vlsfo,pB=pD*vt.portCons*vt.vlsfo,tB=bB+lB+pB;
+    opt.hire=Math.round((targetCP-tB)/(onH*(1-comm)));
+  }else{
+    var onH=lD+pD,pB=pD*vt.portCons*vt.vlsfo;
+    opt.hire=Math.round(((targetCP-lB-pB)/(1-comm)+1000000)/(onH+100));
+  }
+  opt.bbOverride=false;opt.bb=null;
+  // Flash the hire input orange
+  setTimeout(function(){
+    var el=document.querySelector('input[data-vi="'+tgtVi+'"][data-oi="'+tgtOi+'"][data-of="hire"]');
+    if(el){el.classList.add("matched");setTimeout(function(){el.classList.remove("matched")},2000)}
+  },100);
+  renderAll();
+}
+
+function renderVessels(){
+  var nv=vessels.length,colW='flex:1;min-width:0';
+  var h='<div class="vessels-row" style="display:flex;gap:10px;align-items:flex-start;margin-bottom:14px">';
+  for(var vi=0;vi<nv;vi++){h+='<div class="vessel-col" style="'+colW+'">'+buildVessel(vi)+'</div>'}
+  h+='<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-start;padding-top:24px;gap:6px">';
+  if(nv<4)h+='<button class="btn-addv" id="btnAddVessel" style="white-space:nowrap;padding:6px 10px;font-size:11px">+ Vessel</button>';
+  if(nv>1)h+='<button class="btn-delv" id="btnRemoveVessel" style="white-space:nowrap;padding:4px 8px;font-size:10px">\u2212</button>';
+  h+='</div>';
+  if(nv===1)h+='<div style="flex:1;min-width:0"></div>';
+  h+='</div>';
+  document.getElementById("vesselsContainer").innerHTML=h;
+  bindAll();
+}
+
+function buildVessel(vi){
+  var v=vessels[vi],h='',v0n=vessels[0].name||"V1";
+
+  // Single data entry card
+  h+='<div class="card">';
+
+  // Vessel header: name + com% + seaM%
+  h+='<div class="vname-row">';
+  h+='<input class="vname-inp" value="'+esc(v.name)+'" data-vi="'+vi+'" data-vf="name">';
+  h+='<div style="display:flex;gap:6px;align-items:center;margin-left:auto">';
+  h+='<div class="vparam"><span class="vparam-lbl">Com</span><div class="u-wrap" style="width:80px"><input class="inp vparam-inp" type="number" value="'+fmtD2(v.commission)+'" step="0.25" data-vi="'+vi+'" data-vf="commission" style="padding-right:28px"><span class="u-lbl">%</span></div></div>';
+  h+='<div class="vparam"><span class="vparam-lbl">Sea M</span><div class="u-wrap" style="width:80px"><input class="inp vparam-inp" type="number" value="'+fmtD(v.seaMargin)+'" step="0.5" data-vi="'+vi+'" data-vf="seaMargin" style="padding-right:28px"><span class="u-lbl">%</span></div></div>';
+  h+='</div></div>';
+
+  // Speed & Cons section
+  h+='<div class="sec-hdr-row" style="margin-top:8px"><div class="card-title" style="margin-bottom:0">Speed & Cons</div><div style="display:flex;gap:3px;align-items:center">';
+  var pr=v.preset;
+  h+='<button class="btn-preset btn-sm'+(pr==="bki"?' pressed':'')+'" data-preset="bki" data-vi="'+vi+'">\u29C9 Tess82</button>';
+  h+='<button class="btn-preset btn-sm'+(pr==="sungd"?' pressed':'')+'" data-preset="sungd" data-vi="'+vi+'">\u29C9 Sungd</button>';
+  h+='<button class="btn-preset btn-sm'+(pr==="dacks"?' pressed':'')+'" data-preset="dacks" data-vi="'+vi+'">\u29C9 Dacks</button>';
+  h+='<div class="eco-full"><button class="'+(v.ecoFull==="eco"?" on":"")+'" data-seteco="'+vi+'">eco</button><button class="'+(v.ecoFull==="full"?" on":"")+'" data-setfull="'+vi+'">full</button></div>';
+  h+='</div></div>';
+  h+='<div class="speed-grid"><div></div><div class="speed-hdr">Spd</div><div class="speed-hdr">Cons</div>';
+  h+='<div class="speed-lbl">Ballast</div><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.bSpeed)+'" step="0.01" data-vi="'+vi+'" data-vf="bSpeed" style="padding-right:34px"><span class="u-lbl">kn</span></div><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.bCons)+'" step="0.01" data-vi="'+vi+'" data-vf="bCons" style="padding-right:38px"><span class="u-lbl">MT/d</span></div>';
+  h+='<div class="speed-lbl">Laden</div><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.lSpeed)+'" step="0.01" data-vi="'+vi+'" data-vf="lSpeed" style="padding-right:34px"><span class="u-lbl">kn</span></div><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.lCons)+'" step="0.01" data-vi="'+vi+'" data-vf="lCons" style="padding-right:38px"><span class="u-lbl">MT/d</span></div>';
+  h+='</div>';
+  h+='<div class="speed-grid" style="margin-top:6px">';
+  h+='<div class="speed-lbl">Bunkers</div><div class="u-wrap"><input class="inp" type="number" value="'+v.vlsfo+'" step="10" data-vi="'+vi+'" data-vf="vlsfo" style="padding-right:38px"><span class="u-lbl">$/MT</span></div>';
+  h+='<div><label class="lbl">Port Cons</label><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.portCons)+'" step="0.01" data-vi="'+vi+'" data-vf="portCons" style="padding-right:30px"><span class="u-lbl">MT</span></div></div>';
+  h+='</div>';
+
+  // Voyage Options section
+  var isDopV=!!v.dop;
+  var iv=v.intakeShow||(v.intakePrice!==0&&v.intakeDelta!==0);
+  h+='<div class="sec-hdr-row" style="margin-top:8px"><div style="display:flex;align-items:center;gap:10px"><div class="card-title" style="margin-bottom:0">Voyage Options</div>';
+  h+='<button class="intake-toggle'+(iv?' on':'')+'" data-toggleintake="'+vi+'">\u0394 Intake</button>';
+  h+='<div class="aps-dop"><button class="'+(isDopV?'':' on')+'" data-vi="'+vi+'" data-setdop="0">APS</button><button class="'+(isDopV?' on':'')+'" data-vi="'+vi+'" data-setdop="1">DOP</button></div></div>';
+  h+='<div style="display:flex;gap:4px;align-items:center;margin-left:auto">';
+  h+='<button class="btn-preset'+(v.p6Used?' pressed':'')+'" data-p6="'+vi+'">\u29C9 P6</button>';
+  if(v.options.length<4)h+='<button class="btn-add" data-addopt="'+vi+'">+ Voy</button>';
+  h+='</div></div>';
+
+  for(var i=0;i<v.options.length;i++){
+    var isDop=!!v.dop,o=v.options[i];
+    h+='<div style="'+(i>0?'margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)':'')+'">';
+    // Option name row
+    h+='<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">';
+    h+='<input class="inp inp-center" value="'+esc(o.name)+'" data-vi="'+vi+'" data-oi="'+i+'" data-of="name" style="flex:1;text-align:left">';
+    if(i>0)h+='<button class="btn-copy" data-vi="'+vi+'" data-copyopt="'+i+'">\u29C9 Opt1</button>';
+    if(v.options.length>1)h+='<button class="btn-del" data-vi="'+vi+'" data-delopt="'+i+'">&times;</button>';
+    h+='<div style="display:flex;align-items:center;gap:3px;margin-left:auto">';
+    h+='<span class="opt-lbl">Port</span><div class="u-wrap" style="width:82px"><input class="inp" type="number" value="'+o.portDays+'" step="0.5" data-vi="'+vi+'" data-oi="'+i+'" data-of="portDays" style="padding-right:28px"><span class="u-lbl">d</span></div>';
+    h+='<span class="opt-lbl">Off-H</span><div class="u-wrap" style="width:82px"><input class="inp" type="number" value="'+(o.offhire||0)+'" step="0.5" data-vi="'+vi+'" data-oi="'+i+'" data-of="offhire" style="padding-right:28px"><span class="u-lbl">d</span></div>';
+    h+='</div></div>';
+    // Fields grid: Hire + B nm (+ $/T if intake), BB + L nm (+ Δ MT if intake)
+    var cols=iv?'auto 1fr auto 1fr auto 1fr':'auto 1fr auto 1fr';
+    h+='<div style="display:grid;grid-template-columns:'+cols+';gap:2px 3px;align-items:center">';
+    h+='<div class="opt-lbl" style="padding-right:1px">Hire</div><div class="u-wrap"><input class="inp" type="number" value="'+o.hire+'" step="250" data-vi="'+vi+'" data-oi="'+i+'" data-of="hire" style="padding-right:34px"><span class="u-lbl">pd</span></div>';
+    h+='<div class="opt-lbl" style="padding-right:1px">B</div><div class="u-wrap"><input class="inp" type="number" value="'+o.bDist+'" step="50" data-vi="'+vi+'" data-oi="'+i+'" data-of="bDist" style="padding-right:38px"><span class="u-lbl">nm</span></div>';
+    if(iv)h+='<div class="opt-lbl" style="padding-right:1px">$/T</div><div class="u-wrap"><input class="inp" type="number" value="'+v.intakePrice+'" step="1" data-vi="'+vi+'" data-vf="intakePrice" style="padding-right:22px"></div>';
+    if(!isDop){
+      var bbVal=getBB(o),bpr=o.bbOverride?"32px":"42px";
+      h+='<div class="opt-lbl" style="padding-right:1px">BB</div><div class="bb-wrap"><input class="inp" type="number" value="'+bbVal+'" step="5000" data-vi="'+vi+'" data-oi="'+i+'" data-of="bb" style="padding-right:'+bpr+'">';
+      if(o.bbOverride)h+='<button class="bb-reset" data-vi="'+vi+'" data-bbreset="'+i+'">\u21BA</button>';
+      else h+='<span class="bb-auto">auto</span>';
+      h+='</div>';
+    }else{h+='<div></div><div></div>'}
+    h+='<div class="opt-lbl" style="padding-right:1px">L</div><div class="u-wrap"><input class="inp" type="number" value="'+o.lDist+'" step="50" data-vi="'+vi+'" data-oi="'+i+'" data-of="lDist" style="padding-right:38px"><span class="u-lbl">nm</span></div>';
+    if(iv){var dSty=v.intakeDelta>0?'background:var(--grn);border-color:var(--grn-b)':v.intakeDelta<0?'background:var(--orn);border-color:var(--orn-b)':'';
+      h+='<div class="opt-lbl" style="padding-right:1px">\u0394 MT</div><div class="u-wrap"><input class="inp" type="number" value="'+v.intakeDelta+'" step="100" data-vi="'+vi+'" data-vf="intakeDelta" style="'+dSty+'"></div>'}
+    h+='</div></div>';
+  }
+
+  h+='</div>'; // close the single card
+  return h;
+}
+
+function mf(l,f,v,s,vi){return'<div><label class="lbl">'+l+'</label><input class="inp" type="number" value="'+v+'" step="'+s+'" data-vi="'+vi+'" data-vf="'+f+'"></div>'}
+
+// ─── Bind ───
+function bindAll(){
+  qsa("input[data-vf]").forEach(function(el){el.addEventListener("input",function(){
+    var vi=+this.dataset.vi,f=this.dataset.vf;
+    if(f==="name"){vessels[vi].name=this.value;renderResults()}
+    else{vessels[vi][f]=parseFloat(this.value)||0;renderResults();colorInputs()}
+  })});
+  qsa("input[data-of]").forEach(function(el){el.addEventListener("input",function(){
+    var vi=+this.dataset.vi,oi=+this.dataset.oi,f=this.dataset.of,opt=vessels[vi].options[oi];
+    if(f==="name"){opt.name=this.value;renderResults()}
+    else if(f==="hire"){opt.hire=parseFloat(this.value)||0;if(!opt.bbOverride){var b=qs('input[data-vi="'+vi+'"][data-oi="'+oi+'"][data-of="bb"]');if(b)b.value=autoBB(opt.hire)}renderResults();colorInputs()}
+    else if(f==="bb"){var mv=parseFloat(this.value)||0,av=autoBB(opt.hire);if(Math.abs(mv-av)>0.5){opt.bb=mv;opt.bbOverride=true;renderAll()}renderResults()}
+    else if(f==="offhire"){opt.offhire=parseFloat(this.value)||0;renderResults()}
+    else{opt[f]=parseFloat(this.value)||0;renderResults();colorInputs()}
+  })});
+  qsa("button[data-delopt]").forEach(function(el){el.addEventListener("click",function(){vessels[+this.dataset.vi].options.splice(+this.dataset.delopt,1);renderAll()})});
+  qsa("button[data-addopt]").forEach(function(el){el.addEventListener("click",function(){var vi=+this.dataset.addopt;vessels[vi].options.push({name:"Option "+(vessels[vi].options.length+1),hire:0,bb:null,bbOverride:false,bDist:0,lDist:0,portDays:10,offhire:0});renderAll()})});
+  qsa("button[data-copyopt]").forEach(function(el){el.addEventListener("click",function(){var vi=+this.dataset.vi,oi=+this.dataset.copyopt,s=vessels[vi].options[0],t=vessels[vi].options[oi];t.hire=s.hire;t.bb=s.bb;t.bbOverride=s.bbOverride;t.bDist=s.bDist;t.lDist=s.lDist;t.portDays=s.portDays;t.offhire=s.offhire;renderAll()})});
+  qsa("button[data-setdop]").forEach(function(el){el.addEventListener("click",function(){vessels[+this.dataset.vi].dop=!!+this.dataset.setdop;renderAll()})});
+  qsa("button[data-bbreset]").forEach(function(el){el.addEventListener("click",function(){vessels[+this.dataset.vi].options[+this.dataset.bbreset].bbOverride=false;vessels[+this.dataset.vi].options[+this.dataset.bbreset].bb=null;renderAll()})});
+  qsa("button[data-copyspeed]").forEach(function(el){el.addEventListener("click",function(){var vi=+this.dataset.copyspeed,s=vessels[0];vessels[vi].bSpeed=s.bSpeed;vessels[vi].bCons=s.bCons;vessels[vi].lSpeed=s.lSpeed;vessels[vi].lCons=s.lCons;vessels[vi].portCons=s.portCons;vessels[vi].vlsfo=s.vlsfo;renderAll()})});
+  qsa("button[data-copyopts]").forEach(function(el){el.addEventListener("click",function(){var vi=+this.dataset.copyopts,s=vessels[0];vessels[vi].options=[];for(var k=0;k<s.options.length;k++){var o=s.options[k];vessels[vi].options.push({name:o.name,hire:o.hire,bb:o.bb,bbOverride:o.bbOverride,bDist:o.bDist,lDist:o.lDist,portDays:o.portDays,offhire:o.offhire||0})}renderAll()})});
+  var rv=document.getElementById("btnRemoveVessel");
+  if(rv)rv.addEventListener("click",function(){if(vessels.length>1){vessels.pop();renderAll()}});
+  qsa("button[data-toggleintake]").forEach(function(el){el.addEventListener("click",function(){var vi=+this.dataset.toggleintake;vessels[vi].intakeShow=!vessels[vi].intakeShow;if(!vessels[vi].intakePrice)vessels[vi].intakePrice=35;if(vessels[vi].intakeDelta==null)vessels[vi].intakeDelta=0;renderAll()})});
+  // Presets
+  qsa("button[data-preset]").forEach(function(el){el.addEventListener("click",function(){applyPreset(+this.dataset.vi,this.dataset.preset)})});
+  // Eco/Full toggle
+  qsa("button[data-seteco]").forEach(function(el){el.addEventListener("click",function(){var vi=+this.dataset.seteco;vessels[vi].ecoFull="eco";if(vessels[vi].preset&&PRESETS[vessels[vi].preset]){var s=PRESETS[vessels[vi].preset].eco;vessels[vi].bSpeed=s.bSpeed;vessels[vi].bCons=s.bCons;vessels[vi].lSpeed=s.lSpeed;vessels[vi].lCons=s.lCons}renderAll()})});
+  qsa("button[data-setfull]").forEach(function(el){el.addEventListener("click",function(){var vi=+this.dataset.setfull;vessels[vi].ecoFull="full";if(vessels[vi].preset&&PRESETS[vessels[vi].preset]){var s=PRESETS[vessels[vi].preset].full;vessels[vi].bSpeed=s.bSpeed;vessels[vi].bCons=s.bCons;vessels[vi].lSpeed=s.lSpeed;vessels[vi].lCons=s.lCons}renderAll()})});
+  // Preset P6 (also sets DOP, portDays 12, renames options)
+  qsa("button[data-p6]").forEach(function(el){el.addEventListener("click",function(){var vi=+this.dataset.p6;vessels[vi].dop=true;vessels[vi].p6Used=true;for(var k=0;k<vessels[vi].options.length;k++){vessels[vi].options[k].bDist=8950;vessels[vi].options[k].lDist=11400;vessels[vi].options[k].name="ECSA Feast v Sgp";vessels[vi].options[k].portDays=12}renderAll()})});
+  var av=document.getElementById("btnAddVessel");
+  if(av)av.addEventListener("click",function(){if(vessels.length>=4)return;var s=vessels[0],no=[];for(var k=0;k<s.options.length;k++){var o=s.options[k];no.push({name:o.name,hire:o.hire,bb:o.bb,bbOverride:o.bbOverride,bDist:o.bDist,lDist:o.lDist,portDays:o.portDays,offhire:o.offhire||0})}vessels.push({name:"Vessel_"+(vessels.length+1),vlsfo:900,commission:5,seaMargin:4,bSpeed:12,bCons:17,lSpeed:11.5,lCons:19.5,portCons:2.7,intakeShow:false,intakePrice:35,intakeDelta:0,dop:false,preset:null,ecoFull:"eco",p6Used:false,options:no});renderAll()});
+  colorInputs();
+}
+
+function qsa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+function qs(s){return document.querySelector(s)}
+
+function colorInputs(){
+  for(var vi=0;vi<vessels.length;vi++){
+    var opts=vessels[vi].options;if(opts.length<2)continue;
+    var fs=["hire","bb","bDist","lDist","portDays"];
+    for(var f=0;f<fs.length;f++){
+      var k=fs[f],base=(k==="bb")?getBB(opts[0]):opts[0][k];
+      for(var i=1;i<opts.length;i++){
+        var cur=(k==="bb")?getBB(opts[i]):opts[i][k];
+        var el=qs('input[data-vi="'+vi+'"][data-oi="'+i+'"][data-of="'+k+'"]');
+        if(!el)continue;el.classList.remove("val-up","val-down");
+        if(cur>base)el.classList.add("val-up");else if(cur<base)el.classList.add("val-down");
+      }
+    }
+  }
+  if(vessels.length<2)return;
+  var vfs=["vlsfo","commission","seaMargin","bSpeed","bCons","lSpeed","lCons","portCons"];
+  for(var vi=1;vi<vessels.length;vi++){
+    for(var f=0;f<vfs.length;f++){
+      var el=qs('input[data-vi="'+vi+'"][data-vf="'+vfs[f]+'"]');
+      if(!el)continue;el.classList.remove("val-up","val-down");
+      if(vessels[vi][vfs[f]]>vessels[0][vfs[f]])el.classList.add("val-up");
+      else if(vessels[vi][vfs[f]]<vessels[0][vfs[f]])el.classList.add("val-down");
+    }
+    var o0=vessels[0].options,oV=vessels[vi].options;
+    var fs2=["hire","bb","bDist","lDist","portDays"];
+    for(var oi=0;oi<oV.length&&oi<o0.length;oi++){
+      for(var f=0;f<fs2.length;f++){
+        var k=fs2[f],b0=(k==="bb")?getBB(o0[oi]):o0[oi][k],cv=(k==="bb")?getBB(oV[oi]):oV[oi][k];
+        var el=qs('input[data-vi="'+vi+'"][data-oi="'+oi+'"][data-of="'+k+'"]');
+        if(!el)continue;el.classList.remove("val-up","val-down");
+        if(cv>b0)el.classList.add("val-up");else if(cv<b0)el.classList.add("val-down");
+      }
+    }
+  }
+}
+
+// ─── Results ───
+function vl(t,c){return'<div class="r-val '+(c||"")+'">' +t+'</div>'}
+function rw(l,v1,v2,b,hl){return'<div class="r-row '+(b?"bordered":"")+" "+(hl?"highlight":"")+'">'+'<div class="r-label">'+l+'</div>'+(v1||"<div></div>")+(v2||"<div></div>")+'</div>'}
+function blankRow(){return'<div class="r-row bordered"><div class="r-label">&nbsp;</div><div class="r-val">&nbsp;</div><div class="r-val">&nbsp;</div></div>'}
+function cmpCls(val,ref){if(val>ref+0.5)return" cmp-up";if(val<ref-0.5)return" cmp-down";return""}
+
+function renderResults(){
+  var multi=vessels.length>1;
+  var allR=[];
+  for(var vi=0;vi<vessels.length;vi++){allR[vi]=[];for(var oi=0;oi<vessels[vi].options.length;oi++)allR[vi][oi]=calc(vessels[vi].options[oi],vessels[vi])}
+  var flat=[];
+  for(var vi=0;vi<vessels.length;vi++)for(var oi=0;oi<vessels[vi].options.length;oi++)flat.push({vi:vi,oi:oi,r:allR[vi][oi]});
+  var best=-Infinity;for(var k=0;k<flat.length;k++)if(flat[k].r.gTCE>best)best=flat[k].r.gTCE;
+
+  var maxOpts=0;for(var vi=0;vi<vessels.length;vi++)if(vessels[vi].options.length>maxOpts)maxOpts=vessels[vi].options.length;
+  var nv=vessels.length;
+
+  var h='';
+  for(var oi=0;oi<maxOpts;oi++){
+    // Pre-scan: check what conditional rows ANY vessel needs for this option
+    var anyOH=false,anyAPS=false,anyDOP=false,anyIntake=false,anyOHrev=false;
+    for(var vi=0;vi<vessels.length;vi++){
+      if(oi>=vessels[vi].options.length)continue;
+      var r=allR[vi][oi];
+      if(r.oh>0)anyOH=true;
+      if(!r.isDop)anyAPS=true;
+      if(r.isDop)anyDOP=true;
+      if(r.iV!==0)anyIntake=true;
+      if(r.oh>0)anyOHrev=true;
+    }
+
+    var colW='flex:1;min-width:0';
+    h+='<div class="results-pair">';
+    for(var vi=0;vi<vessels.length;vi++){
+      h+='<div class="res-col" style="'+colW+'">';
+      if(oi<vessels[vi].options.length){
+        var v=vessels[vi],opt=v.options[oi],r=allR[vi][oi];
+        var isB=r.gTCE===best&&flat.length>1;
+        var ref=(vi>0&&oi<allR[0].length)?allR[0][oi]:null;
+        var cc=function(val,refVal){return(ref!==null)?cmpCls(val,refVal):""};
+
+        h+='<div class="res-card '+(isB?"best":"normal")+'">';
+        h+='<div class="res-header"><div class="res-name"><div class="res-vname">'+esc(v.name);
+        if(r.isDop)h+='<span style="font-size:10px;font-weight:600;color:var(--gld);background:var(--gld-bg4);padding:1px 5px;border-radius:2px;margin-left:6px;vertical-align:middle">DOP</span>';
+        if(isB)h+='<span class="badge-best">Best</span>';
+        h+='</div><div class="res-oname">'+esc(opt.name)+'</div></div>';
+        h+='<div><div class="tce-label">Gross TCE</div>';
+        var tceCmp=(ref!==null)?cmpCls(r.gTCE,ref.gTCE):"";
+        var tceBg=tceCmp===" cmp-up"?"tce-cmp-up":tceCmp===" cmp-down"?"tce-cmp-down":"";
+        h+='<div class="tce-value '+tceBg+'">$'+fmt(r.gTCE,0)+'</div>';
+        h+='<div class="tce-gross '+tceBg+'">net $'+fmt(r.nTCE,0)+'</div>';
+        h+='</div></div>';
+
+        // Duration
+        h+='<div class="sec-head" style="display:flex;justify-content:space-between;align-items:center">Voyage Duration<div style="display:flex;align-items:center;gap:4px"><span style="font-size:8px;color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">Sp/Cons basis</span><div class="aps-dop nom-about" style="font-size:8px"><button class="'+(isAbout?'':' on')+'" data-setnomabout="nom" style="padding:1px 6px;font-size:8px">NOM</button><button class="'+(isAbout?' on':'')+'" data-setnomabout="about" style="padding:1px 6px;font-size:8px">ABOUT</button></div></div></div>';
+        h+=rw("Ballast",vl(fmt(opt.bDist)+" nm","sm"),vl(fmtD(r.bD)+"d",(ref?cc(r.bD,ref.bD):"")),1);
+        h+=rw("Laden",vl(fmt(opt.lDist)+" nm","sm"),vl(fmtD(r.lD)+"d",(ref?cc(r.lD,ref.lD):"")),1);
+        h+=rw("Port L/D","",vl(fmtD(r.pD)+"d"),1);
+        if(anyOH){h+=(r.oh>0)?rw("Off-hire","",vl(fmtD(r.oh)+"d","red"),1):rw("Off-hire","","",1)}
+        h+=rw("On Hire","",vl(fmtD(r.onH)+"d","bold gold"+(ref?cc(r.onH,ref.onH):"")),1);
+        h+=rw("Total Voyage","",vl(fmtD(r.tot)+"d","bold"+(ref?cc(r.tot,ref.tot):"")),0,1);
+
+        // Bunkers
+        h+='<div class="sec-head">Bunker Costs</div>';
+        h+=rw("Ballast",vl(fmt(r.dBB,0)+"/d","sm"+(ref?cc(-r.dBB,-ref.dBB):"")),vl(fmt(r.bB,0),"red"+(ref?cc(-r.bB,-ref.bB):"")),1);
+        h+=rw("Laden",vl(fmt(r.dLB,0)+"/d","sm"+(ref?cc(-r.dLB,-ref.dLB):"")),vl(fmt(r.lB,0),"red"+(ref?cc(-r.lB,-ref.lB):"")),1);
+        h+=rw("Port",vl(fmt(r.dPB,0)+"/d","sm"+(ref?cc(-r.dPB,-ref.dPB):"")),vl(fmt(r.pB,0),"red"+(ref?cc(-r.pB,-ref.pB):"")),1);
+        if(anyOH){h+=(r.oh>0)?rw("Off-hire bunk","",vl(fmt(r.ohB,0),"red"+(ref&&ref.oh>0?cc(-r.ohB,-ref.ohB):"")),1):rw("Off-hire bunk","","",1)}
+        h+=rw("Total Bunkers","",vl(fmt(r.tB,0),"bold red"+(ref?cc(-r.tB,-ref.tB):"")),0,1);
+
+        // Revenue
+        h+='<div class="sec-head">Vessel Gets (Net) \u2014 '+(r.isDop?'DOP':'APS')+'</div>';
+        h+=rw("Hire Revenue",vl(fmt(r.nH,0)+"/d","sm"+(ref?cc(r.nH,ref.nH):"")),vl(fmt(r.hR,0),"green"+(ref?cc(r.hR,ref.hR):"")),1);
+        if(anyAPS){
+          if(!r.isDop){
+            h+=rw("BB (net comm)",vl(fmt(r.bb,0)+' <span style="font-size:9px;color:var(--dim)">(gr)</span>',"sm"+(ref&&!ref.isDop?cc(r.bb,ref.bb):"")),vl(fmt(r.nBB,0),"green"+(ref?cc(r.nBB,ref.nBB):"")),1);
+            h+=rw("Ballast Bunk","",vl("("+fmt(r.bB,0)+")","red"+(ref?cc(-r.bB,-ref.bB):"")),1);
+          }else{
+            h+=blankRow();h+=blankRow();
+          }
+        }
+        if(anyOHrev){h+=(r.oh>0)?rw("Off-hire bunk","",vl("("+fmt(r.ohB,0)+")","red"),1):rw("Off-hire bunk","","",1)}
+        h+=rw("Net Voyage",vl(fmtD(r.tot)+"d","sm"),vl(fmt(r.vN,0),"bold"+(ref?cc(r.vN,ref.vN):"")),0,1);
+        h+='<div class="divider">'+rw("Charterer Pays",vl(fmtD(r.onH)+"d","sm"),vl(fmt(r.cP,0),"bold muted"+(ref?cc(r.cP,ref.cP):"")))+"</div>";
+
+        // Intake
+        if(anyIntake){
+          if(r.iV!==0){
+            var iAdj=-r.iV;
+            h+=rw("Intake "+(vessels[vi].intakeDelta>0?"+":"")+fmt(vessels[vi].intakeDelta)+"MT","",vl((iAdj>0?"+":"")+fmt(iAdj,0),iAdj>0?"red":"green"),0);
+            h+=rw("Adj. Chrt Pays","",vl(fmt(r.adjCP,0),"bold gold"+(ref?cc(r.adjCP,ref.adjCP):"")),0,1);
+          }else{
+            h+=blankRow();h+=blankRow();
+          }
+        }
+
+        // Match buttons
+        if(multi){
+          if(vi===0){
+            for(var tvi=1;tvi<vessels.length;tvi++){
+              if(oi<vessels[tvi].options.length){
+                var tgtR=allR[tvi][oi],diff=r.adjCP-tgtR.adjCP;
+                var dc=Math.abs(diff)<1?"var(--dim2)":(diff>0?"var(--red)":"var(--green)");
+                h+='<div class="delta-line" style="color:'+dc+'">\u0394 '+(Math.abs(diff)<1?"matched":(diff>0?"+"+fmt(diff,0):fmt(diff,0)))+'</div>';
+                h+='<button class="btn-match" data-srcvi="'+tvi+'" data-srcoi="'+oi+'" data-tgtvi="0" data-tgtoi="'+oi+'">Adjust hire so Charterer pays same with '+esc(vessels[tvi].name)+'</button>';
+              }
+            }
+          }else{
+            if(oi<vessels[0].options.length){
+              var diff2=r.adjCP-allR[0][oi].adjCP;
+              var dc2=Math.abs(diff2)<1?"var(--dim2)":(diff2>0?"var(--red)":"var(--green)");
+              h+='<div class="delta-line" style="color:'+dc2+'">\u0394 '+(Math.abs(diff2)<1?"matched":(diff2>0?"+"+fmt(diff2,0):fmt(diff2,0)))+'</div>';
+              h+='<button class="btn-match" data-srcvi="0" data-srcoi="'+oi+'" data-tgtvi="'+vi+'" data-tgtoi="'+oi+'">Adjust hire so Charterer pays same with '+esc(vessels[0].name)+'</button>';
+            }
+          }
+        }
+        // Eco=Full solver buttons
+        if(v.preset&&PRESETS[v.preset]){
+          h+='<div style="display:flex;gap:4px;margin-top:6px">';
+          h+='<button class="btn-match" style="background:var(--gld-bg4);border-color:var(--gld-brd);color:var(--gld);margin-top:0;flex:1" data-ecofull-vi="'+vi+'" data-ecofull-oi="'+oi+'">Calc Hire when Eco\u2009=\u2009Full</button>';
+          h+='<button class="btn-match" style="background:var(--gld-bg4);border-color:var(--gld-brd);color:var(--gld);margin-top:0;flex:1" data-bunkef-vi="'+vi+'" data-bunkef-oi="'+oi+'">Calc Bunkers when Eco\u2009=\u2009Full</button>';
+          h+='</div>';
+        }
+        h+='</div>';
+      }
+      h+='</div>';
+    }
+    if(nv===1)h+='<div style="flex:1;min-width:0"></div>';
+    if(nv<4)h+='<div style="flex-shrink:0;width:70px"></div>';
+    h+='</div>';
+  }
+  document.getElementById("resultsContainer").innerHTML=h;
+
+  qsa("button[data-srcvi]").forEach(function(el){el.addEventListener("click",function(){
+    solveHire(+this.dataset.srcvi,+this.dataset.srcoi,+this.dataset.tgtvi,+this.dataset.tgtoi);
+    this.classList.add("btn-match-flash");var self=this;setTimeout(function(){self.classList.remove("btn-match-flash")},600);
+  })});
+
+  qsa("button[data-setnomabout]").forEach(function(el){el.addEventListener("click",function(){
+    isAbout=(this.dataset.setnomabout==="about");renderResults();
+  })});
+
+  qsa("button[data-ecofull-vi]").forEach(function(el){el.addEventListener("click",function(){
+    solveEcoFull(+this.dataset.ecofullVi,+this.dataset.ecofullOi);
+  })});
+
+  qsa("button[data-bunkef-vi]").forEach(function(el){el.addEventListener("click",function(){
+    solveBunkEcoFull(+this.dataset.bunkefVi,+this.dataset.bunkefOi);
+  })});
+
+  // Summary - aligned with card columns
+  if(flat.length>1){
+    var nv=vessels.length;
+    var s='<div class="card-title" style="margin-bottom:6px">Comparison Summary</div>';
+    s+='<div class="results-pair" style="margin-top:0">';
+    // One summary column per vessel
+    for(var vvi=0;vvi<nv;vvi++){
+      s+='<div class="res-col"><div class="card" style="padding:8px">';
+      // Column header
+      s+='<div style="font-size:10px;font-weight:700;color:var(--dim5);margin-bottom:4px">'+esc(vessels[vvi].name)+'</div>';
+      var vopts=vessels[vvi].options;
+      var hasIntake=vessels.some(function(v){return v.intakeShow&&v.intakeDelta!==0});
+      var metrics=[
+        ["Gross TCE",function(r){return r.gTCE},function(r){return fmt(r.gTCE,0)},1],
+        ["Net TCE",function(r){return r.nTCE},function(r){return fmt(r.nTCE,0)},0],
+        ["Total Days",function(r){return r.tot},function(r){return fmtD(r.tot)},0],
+        ["Net Voyage",function(r){return r.vN},function(r){return fmt(r.vN,0)},0],
+        ["Bunkers",function(r){return r.tB},function(r){return fmt(r.tB,0)},0],
+        ["Chrt Pays",function(r){return r.cP},function(r){return fmt(r.cP,0)},0]
+      ];
+      if(hasIntake){
+        metrics.push(["Intake Adj",function(r){return -r.iV},function(r){return r.iV===0?"\u2014":(-r.iV>0?"+":"")+fmt(-r.iV,0)},0]);
+        metrics.push(["Adj. CP",function(r){return r.adjCP},function(r){return fmt(r.adjCP,0)},0]);
+      }
+      // Sub-columns per option
+      var optCols="80px repeat("+vopts.length+",1fr)";
+      s+='<div style="display:grid;grid-template-columns:'+optCols+';gap:3px">';
+      s+='<div></div>';
+      for(var oi=0;oi<vopts.length;oi++){
+        s+='<div class="summary-val bold" style="color:var(--dim5);font-size:9px">'+esc(vopts[oi].name)+'</div>';
+      }
+      for(var m=0;m<metrics.length;m++){
+        s+='<div class="summary-label">'+metrics[m][0]+'</div>';
+        for(var oi=0;oi<vopts.length;oi++){
+          var rv=allR[vvi][oi],isBR=(m===0&&rv.gTCE===best);
+          var refR=(vvi>0&&oi<allR[0].length)?allR[0][oi]:null;
+          var curVal=metrics[m][1](rv),refVal=refR?metrics[m][1](refR):null,bgCls="";
+          if(!isBR&&refR!==null){
+            var inv=(m===4);var a=inv?-curVal:curVal,b=inv?-refVal:refVal;
+            if(a>b+0.5)bgCls=" cmp-up";else if(a<b-0.5)bgCls=" cmp-down";
+          }
+          s+='<div class="summary-val '+(metrics[m][3]?"bold":"")+bgCls+'" style="'+(isBR?"color:var(--gld)":"")+'">'+metrics[m][2](rv)+'</div>';
+        }
+      }
+      s+='<div class="summary-label delta-row" style="font-size:13px;font-weight:700">\u0394 best</div>';
+      for(var oi=0;oi<vopts.length;oi++){
+        var d=allR[vvi][oi].gTCE-best;
+        s+='<div class="summary-val bold delta-row'+(d===0?" cmp-up":" cmp-down")+'" style="font-size:20px;font-weight:700">'+(d===0?"\u2014":(d>0?"+":"")+fmt(d,0))+"</div>";
+      }
+      s+='</div></div></div>';
+    }
+    if(nv===1)s+='<div style="flex:1;min-width:0"></div>';
+    if(nv<4)s+='<div style="flex-shrink:0;width:70px"></div>';
+    s+='</div>';
+    document.getElementById("summaryContainer").innerHTML=s;
+  }else document.getElementById("summaryContainer").innerHTML="";
+  colorInputs();
+}
+
+// ─── Save & PDF ───
+function flashBtn(b,l,ic){b.classList.add("save-flash");b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> '+l;setTimeout(function(){b.classList.remove("save-flash");b.innerHTML=ic},1500)}
+var sI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save';
+var pI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>PDF';
+
+// Save dropdown
+var saveWrap=document.getElementById("saveWrap");
+document.getElementById("btnSave").addEventListener("click",function(e){e.stopPropagation();saveWrap.classList.toggle("open")});
+document.addEventListener("click",function(){saveWrap.classList.remove("open")});
+
+function doSaveHTML(readOnly){
+  try{
+    var html=document.documentElement.outerHTML;
+    var nd="/*VESSELS_START*/\nvar vessels="+JSON.stringify(vessels)+";\n/*VESSELS_END*/";
+    html=html.replace(/\/\*VESSELS_START\*\/[\s\S]*?\/\*VESSELS_END\*\//,nd);
+    html="<!DOCTYPE html>\n<html lang=\"en\">\n"+html.replace(/^<html[^>]*>/,"");
+    if(readOnly){
+      // Disable all inputs and buttons, remove interactivity
+      html=html.replace(/<input /g,'<input disabled ');
+      html=html.replace(/<button /g,'<button disabled ');
+      html=html.replace(/<\/script>/,'document.querySelectorAll("input,button,select").forEach(function(e){e.disabled=true;e.style.pointerEvents="none"});<\/script>');
+    }
+    var blob=new Blob([html],{type:"text/html"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+    var now=new Date(),ts=now.getFullYear()+("0"+(now.getMonth()+1)).slice(-2)+("0"+now.getDate()).slice(-2)+"_"+("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2);
+    var suffix=readOnly?"_RO":"";
+    a.href=url;a.download="TCE_"+(vessels[0].name||"calc").replace(/[^a-zA-Z0-9]/g,"_")+"_"+ts+suffix+".html";
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    flashBtn(document.getElementById("btnSave"),readOnly?"Read-only!":"Saved!",sI);
+  }catch(e){alert("Save failed: "+e.message)}
+  saveWrap.classList.remove("open");
+}
+document.getElementById("saveEdit").addEventListener("click",function(e){e.stopPropagation();doSaveHTML(false)});
+document.getElementById("saveRO").addEventListener("click",function(e){e.stopPropagation();doSaveHTML(true)});
+
+document.getElementById("btnPdf").addEventListener("click",function(){
+  var allR=vessels.map(function(vv){return vv.options.map(function(o){return calc(o,vv)})});
+  var flat=[];vessels.forEach(function(vv,i){vv.options.forEach(function(o,j){flat.push({vi:i,oi:j,r:allR[i][j]})})});
+  var best=-1e9;flat.forEach(function(f){if(f.r.gTCE>best)best=f.r.gTCE});
+  var nv=vessels.length,multi=nv>1,hasIntake=vessels.some(function(v){return v.intakeShow&&v.intakeDelta!==0});
+  var css='*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:8px;color:#1a1a1e;padding:12px 16px}h1{font-size:13px;color:#8a6d2b;margin-bottom:2px}.sub{font-size:7px;color:#999;margin-bottom:8px}.cols{display:flex;gap:12px}.col{flex:1}.vtitle{font-size:10px;font-weight:700;border-bottom:1.5px solid #d4a853;padding-bottom:2px;margin-bottom:5px}.vbadge{font-size:6px;font-weight:600;color:#8a6d2b;background:rgba(212,168,83,.15);padding:1px 4px;border-radius:2px;margin-right:4px}.stitle{font-size:7px;font-weight:700;color:#8a6d2b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}table{width:100%;border-collapse:collapse;font-size:8px}td{padding:1px 3px}td.lbl{color:#666;width:40%}td.val{text-align:right;font-family:"Courier New",monospace;font-size:7.5px}td.val.b{font-weight:700}.sep{border-top:1px solid #ddd;margin:3px 0}.sep2{border-top:1px solid #d4a853;margin:3px 0}.rcard{border:1px solid #ddd;border-radius:4px;padding:6px 8px;margin-bottom:5px;background:#fafafa}.rcard.best{border-color:#d4a853;background:rgba(212,168,83,.04)}.rhdr{display:flex;justify-content:space-between;margin-bottom:3px}.rname{font-size:9px;font-weight:700}.rbdg{font-size:5px;font-weight:700;color:#fff;background:#d4a853;padding:1px 4px;border-radius:2px;text-transform:uppercase;margin-left:3px}.tce{text-align:right}.tce-l{font-size:6px;color:#999;text-transform:uppercase}.tce-v{font-size:16px;font-weight:700;color:#8a6d2b;font-family:"Courier New",monospace;line-height:1}.tce-n{font-size:7px;color:#999;font-family:"Courier New",monospace}td.red{color:#c0392b}td.grn{color:#1a7a4c}td.gld{color:#8a6d2b}td.mut{color:#666}td.bgup{background:rgba(26,122,76,.07)}td.bgdn{background:rgba(192,57,43,.07)}.tce-v.bgup{background:rgba(26,122,76,.08);border-radius:3px;padding:0 3px}.tce-v.bgdn{background:rgba(192,57,43,.07);border-radius:3px;padding:0 3px}.sumtbl{width:100%;border-collapse:collapse;font-size:7.5px;margin-top:2px}.sumtbl td,.sumtbl th{padding:1px 4px;text-align:center;font-family:"Courier New",monospace}.sumtbl th{font-size:6.5px;font-weight:700;color:#666}.sumtbl td.slbl{text-align:left;font-family:Arial,sans-serif;color:#666}.sumtbl td.b{font-weight:700}.sumtbl td.gld{color:#8a6d2b}.sumtbl .sep{border-top:1px solid #ddd}';
+  var ph='<h1>TCE Voyage Comparison</h1><div class="sub">'+new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})+'</div>';
+  ph+='<div class="cols">';
+  for(var vi=0;vi<nv;vi++){var v=vessels[vi],isDop=!!v.dop;
+    ph+='<div class="col"><div class="vtitle"><span class="vbadge">V'+(vi+1)+'</span>'+esc(v.name)+' <span style="font-size:7px;color:#666">Com '+fmtD(v.commission)+'% Sea '+fmtD(v.seaMargin)+'%</span></div>';
+    ph+='<div style="margin-bottom:3px"><div class="stitle">Speed & Bunkers</div><table>';
+    ph+='<tr><td class="lbl">B.Spd/Cons</td><td class="val">'+fmtD2(v.bSpeed)+'/'+fmtD2(v.bCons)+'</td><td class="lbl">L.Spd/Cons</td><td class="val">'+fmtD2(v.lSpeed)+'/'+fmtD2(v.lCons)+'</td></tr>';
+    ph+='<tr><td class="lbl">Bunk $/mt</td><td class="val">'+fmt(v.vlsfo)+'</td><td class="lbl">P.Cons</td><td class="val">'+fmtD2(v.portCons)+'</td></tr>';
+    ph+='</table></div>';
+    ph+='<div class="stitle">Options ('+(isDop?'DOP':'APS')+')</div><table>';
+    for(var oi=0;oi<v.options.length;oi++){var o=v.options[oi],bb=getBB(o);
+      ph+='<tr><td class="lbl" style="font-weight:600">'+esc(o.name)+'</td><td class="val">Hire '+fmt(o.hire)+'</td>';
+      if(!isDop)ph+='<td class="val">BB '+fmt(bb)+'</td>';else ph+='<td></td>';
+      ph+='<td class="val">B '+fmt(o.bDist)+'</td><td class="val">L '+fmt(o.lDist)+'</td><td class="val">Pt '+fmtD(o.portDays)+'d'+(o.offhire?' OH '+fmtD(o.offhire)+'d':'')+'</td></tr>'}
+    ph+='</table>';
+    if(v.intakeShow&&v.intakeDelta)ph+='<div style="font-size:7px;color:#8a6d2b;margin-top:2px">Intake: '+(v.intakeDelta>0?'+':'')+fmt(v.intakeDelta)+' MT x $'+fmt(v.intakePrice)+'</div>';
+    ph+='</div>'}
+  ph+='</div><div class="sep2"></div>';
+  var maxO=0;for(var vi=0;vi<nv;vi++)if(vessels[vi].options.length>maxO)maxO=vessels[vi].options.length;
+  for(var oi=0;oi<maxO;oi++){ph+='<div class="cols">';
+    for(var vi=0;vi<nv;vi++){ph+='<div class="col">';
+      if(oi<vessels[vi].options.length){var v=vessels[vi],o=v.options[oi],r=allR[vi][oi],isB=r.gTCE===best&&flat.length>1;
+        var ref=(vi>0&&oi<allR[0].length)?allR[0][oi]:null;
+        var cv=function(a,b){if(!ref)return"";return a>b+.5?" bgup":a<b-.5?" bgdn":""};
+        var ci=function(a,b){if(!ref)return"";return a<b-.5?" bgup":a>b+.5?" bgdn":""};
+        var tc=ref?(r.gTCE>ref.gTCE+.5?"bgup":r.gTCE<ref.gTCE-.5?"bgdn":""):"";
+        ph+='<div class="rcard'+(isB?" best":"")+'"><div class="rhdr"><div><span class="rname">'+esc(v.name)+' \u2014 '+esc(o.name)+'</span>';
+        if(r.isDop)ph+='<span style="font-size:5px;color:#8a6d2b;background:rgba(212,168,83,.12);padding:1px 3px;border-radius:2px;margin-left:2px">DOP</span>';
+        if(isB)ph+='<span class="rbdg">Best</span>';
+        ph+='</div><div class="tce"><div class="tce-l">Gross TCE</div><div class="tce-v '+tc+'">$'+fmt(r.gTCE)+'</div><div class="tce-n">net $'+fmt(r.nTCE)+'</div></div></div>';
+        ph+='<table><tr><td class="lbl">Ballast</td><td class="val'+cv(r.bD,ref?ref.bD:0)+'">'+fmtD(r.bD)+'d</td><td class="lbl">Laden</td><td class="val'+cv(r.lD,ref?ref.lD:0)+'">'+fmtD(r.lD)+'d</td></tr>';
+        ph+='<tr><td class="lbl">On Hire</td><td class="val gld b'+cv(r.onH,ref?ref.onH:0)+'">'+fmtD(r.onH)+'d</td><td class="lbl">Total</td><td class="val b'+cv(r.tot,ref?ref.tot:0)+'">'+fmtD(r.tot)+'d</td></tr>';
+        ph+='<tr><td colspan="4"><div class="sep"></div></td></tr>';
+        ph+='<tr><td class="lbl">Bunkers</td><td class="val red b'+ci(r.tB,ref?ref.tB:0)+'">'+fmt(r.tB)+'</td><td></td><td></td></tr>';
+        ph+='<tr><td colspan="4"><div class="sep"></div></td></tr>';
+        ph+='<tr><td class="lbl">Hire Rev</td><td class="val grn'+cv(r.hR,ref?ref.hR:0)+'">'+fmt(r.hR)+'</td>';
+        if(!r.isDop)ph+='<td class="lbl">BB net</td><td class="val grn'+cv(r.nBB,ref?ref.nBB:0)+'">'+fmt(r.nBB)+'</td>';else ph+='<td></td><td></td>';
+        ph+='</tr><tr><td class="lbl b">Net Voyage</td><td class="val b'+cv(r.vN,ref?ref.vN:0)+'">'+fmt(r.vN)+'</td><td></td><td></td></tr>';
+        ph+='<tr><td colspan="4"><div class="sep2"></div></td></tr>';
+        ph+='<tr><td class="lbl b">Chrt Pays</td><td class="val b mut'+cv(r.cP,ref?ref.cP:0)+'">'+fmt(r.cP)+'</td><td></td><td></td></tr>';
+        if(r.iV!==0){var iA=-r.iV;ph+='<tr><td class="lbl">Intake</td><td class="val'+(iA>0?" red":" grn")+'">'+(iA>0?"+":"")+fmt(iA)+'</td><td></td><td></td></tr>';ph+='<tr><td class="lbl b">Adj CP</td><td class="val b gld'+cv(r.adjCP,ref?ref.adjCP:0)+'">'+fmt(r.adjCP)+'</td><td></td><td></td></tr>'}
+        ph+='</table></div>'}
+      ph+='</div>'}ph+='</div>'}
+  if(flat.length>1){ph+='<div class="sep2" style="margin-top:5px"></div><div class="stitle">Summary</div><table class="sumtbl"><tr><th style="text-align:left"></th>';
+    for(var k=0;k<flat.length;k++){var sl=multi?(vessels[flat[k].vi].name+'/'+vessels[flat[k].vi].options[flat[k].oi].name):vessels[flat[k].vi].options[flat[k].oi].name;ph+='<th>'+esc(sl)+'</th>'}ph+='</tr>';
+    var ms=[["Gross",function(f){return f.r.gTCE},function(f){return fmt(f.r.gTCE)},1,0],["Net",function(f){return f.r.nTCE},function(f){return fmt(f.r.nTCE)},0,0],["Days",function(f){return f.r.tot},function(f){return fmtD(f.r.tot)},0,0],["Net Voy",function(f){return f.r.vN},function(f){return fmt(f.r.vN)},0,0],["Bunk",function(f){return f.r.tB},function(f){return fmt(f.r.tB)},0,1],["CP",function(f){return f.r.cP},function(f){return fmt(f.r.cP)},0,0]];
+    if(hasIntake)ms.push(["Adj CP",function(f){return f.r.adjCP},function(f){return fmt(f.r.adjCP)},0,0]);
+    for(var m=0;m<ms.length;m++){ph+='<tr><td class="slbl">'+ms[m][0]+'</td>';for(var k=0;k<flat.length;k++){var fk=flat[k],cv2=ms[m][1](fk),ibr=m===0&&fk.r.gTCE===best,rR=fk.vi>0&&fk.oi<allR[0].length?allR[0][fk.oi]:null,cl=ibr?" gld":"";if(!ibr&&rR){var rv2=ms[m][1]({r:rR}),inv2=ms[m][4],a2=inv2?-cv2:cv2,b2=inv2?-rv2:rv2;if(a2>b2+.5)cl+=" bgup";else if(a2<b2-.5)cl+=" bgdn"}ph+='<td class="'+(ms[m][3]?"b":"")+cl+'">'+ms[m][2](fk)+'</td>'}ph+='</tr>'}
+    ph+='<tr class="sep"><td class="slbl">\u0394 best</td>';for(var k=0;k<flat.length;k++){var d=flat[k].r.gTCE-best;ph+='<td class="b'+(d===0?" bgup":" bgdn")+'">'+(d===0?'\u2014':fmt(d))+'</td>'}ph+='</tr></table>'}
+  var win=window.open('','_blank','width=1100,height=800');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>TCE - '+esc(vessels[0].name)+'</title><style>'+css+'</style></head><body>'+ph+'</body></html>');
+  win.document.close();win.focus();setTimeout(function(){win.print()},300);
+  flashBtn(document.getElementById("btnPdf"),"Done!",pI);
+});
+
+// Image viewer - inline below cards
+function showImg(f){
+  var url=URL.createObjectURL(f);
+  document.getElementById("imgView").src=url;
+  document.getElementById("imgName").textContent=f.name;
+  document.getElementById("imgSection").classList.add("show");
+}
+document.getElementById("imgClose").addEventListener("click",function(){document.getElementById("imgSection").classList.remove("show");document.getElementById("imgView").src=""});
+
+// Drag & Drop
+var dragC=0;
+document.addEventListener("dragenter",function(e){e.preventDefault();dragC++;document.getElementById("dropZone").classList.add("show")});
+document.addEventListener("dragleave",function(e){e.preventDefault();dragC--;if(dragC<=0){dragC=0;document.getElementById("dropZone").classList.remove("show")}});
+document.addEventListener("dragover",function(e){e.preventDefault()});
+document.addEventListener("drop",function(e){
+  e.preventDefault();dragC=0;document.getElementById("dropZone").classList.remove("show");
+  var f=e.dataTransfer.files[0];if(!f||!f.type.match(/^image\//))return;
+  showImg(f);
+});
+
+// Theme toggle
+var isDark=true;
+document.getElementById("btnTheme").addEventListener("click",function(){
+  isDark=!isDark;
+  document.body.classList.toggle("light",!isDark);
+  // Update icon
+  this.innerHTML=isDark?
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>':
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>';
+});
+
+// Undo/Redo
+document.getElementById("btnUndo").addEventListener("click",function(){doUndo()});
+document.getElementById("btnRedo").addEventListener("click",function(){doRedo()});
+
+// ─── Init ───
+undoStack=[];redoStack=[];
+renderAll();
+</script>
+</body>
+</html>
