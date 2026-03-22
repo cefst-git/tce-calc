@@ -123,7 +123,7 @@ html,body{background:var(--bg);color:var(--txt);font-family:-apple-system,system
 /*VS*/
 var V=[{name:"Trikeri",vlsfo:900,commission:5,seaMargin:4,bSpeed:12,bCons:17,lSpeed:11.5,lCons:19.5,portCons:2.7,intakeShow:false,intakePrice:35,intakeDelta:0,dop:false,preset:null,ecoFull:"eco",p6Used:false,options:[{name:"PMO ECSA Feast",hire:18250,bb:null,bbOverride:false,bDist:7850,lDist:11400,portDays:15,offhire:0}]}];
 /*VE*/
-var AT=0,PK={},US=[],RS=[],UG=false,isAbout=false;
+var AT=0,PK={},US=[],RS=[],UG=false,isAbout=false,toolsOpen=false;
 var VF=["vlsfo","commission","seaMargin","bSpeed","bCons","lSpeed","lCons","portCons","intakePrice","intakeDelta"];
 var CF={vlsfo:{w:4,f:0},commission:{w:1,f:2},seaMargin:{w:1,f:1},bSpeed:{w:2,f:2},lSpeed:{w:2,f:2},bCons:{w:2,f:2},lCons:{w:2,f:2},portCons:{w:2,f:2},hire:{w:5,f:0},bb:{w:7,f:0},bDist:{w:5,f:0},lDist:{w:5,f:0},portDays:{w:2,f:1},intakePrice:{w:3,f:0},intakeDelta:{w:4,f:0},offhire:{w:2,f:1}};
 var PR={bki:{name:"Tess82",pc:3.5,eco:{bs:12.5,bc:23,ls:11.5,lc:22},full:{bs:14,bc:31,ls:13.5,lc:33}},sungd:{name:"Sungdong_81",pc:4,eco:{bs:12.25,bc:22,ls:12,lc:24.5},full:{bs:14,bc:29.75,ls:13,lc:30.25}},dacks:{name:"Dacks_82",pc:3.5,eco:{bs:12.5,bc:18,ls:11.5,lc:19.5},full:{bs:14,bc:24,ls:13.5,lc:28.5}}};
@@ -152,8 +152,12 @@ function solveEF(vi,oi){
   if(dp){var numr=vl*(bD_f*p.full.bc+lD_f*p.full.lc-bD_e*p.eco.bc-lD_e*p.eco.lc);var denm=(1-cm)*(bD_e+lD_e-bD_f-lD_f);if(Math.abs(denm)<0.001)return;newH=Math.round(numr/denm)}
   else{var numr=vl*(lD_f*p.full.lc-lD_e*p.eco.lc);var denm=(1-cm)*(lD_e-lD_f);if(Math.abs(denm)<0.001)return;newH=Math.round(numr/denm)}
   var oldH=o.hire,oldBB=o.bb,oldBBO=o.bbOverride;
+  var dHm=newH-oldH;
+  var bHtml='Hire <span style="color:var(--red);font-size:9px">'+fm(newH)+' <span style="font-size:7px">'+(dHm>=0?"+":"")+fm(dHm)+'</span></span>';
+  if(!dp){var nBB=aBB(newH),oBB2=gBB(o),dBB2=nBB-oBB2;
+    bHtml+='<br><span style="color:var(--red);font-size:8px">BB '+fm(nBB)+' <span style="font-size:7px">'+(dBB2>=0?"+":"")+fm(dBB2)+'</span></span>'}
   o.hire=newH;o.bbOverride=false;o.bb=null;render();
-  flashMob(function(){o.hire=oldH;o.bb=oldBB;o.bbOverride=oldBBO;render()},"Hire");
+  flashMob(function(){o.hire=oldH;o.bb=oldBB;o.bbOverride=oldBBO;render()},"Hire","solveEF",bHtml);
 }
 
 function solveBF(vi,oi){
@@ -165,15 +169,86 @@ function solveBF(vi,oi){
   var newB;
   if(dp){var numr=o.hire*(1-cm)*(bD_e+lD_e-bD_f-lD_f);var denm=(bD_f*p.full.bc+lD_f*p.full.lc)-(bD_e*p.eco.bc+lD_e*p.eco.lc);if(Math.abs(denm)<0.001)return;newB=Math.round(numr/denm)}
   else{var numr=o.hire*(1-cm)*(lD_e-lD_f);var denm=(lD_f*p.full.lc)-(lD_e*p.eco.lc);if(Math.abs(denm)<0.001)return;newB=Math.round(numr/denm)}
-  var oldB=v.vlsfo;
+  var oldB=v.vlsfo,dBm=newB-oldB;
+  var bHtml2='Bunker price <span style="color:var(--red);font-size:9px">'+fm(newB)+' <span style="font-size:7px">'+(dBm>=0?"+":"")+fm(dBm)+'</span></span>';
   v.vlsfo=newB;render();
-  flashMob(function(){v.vlsfo=oldB;render()},"Bunk $/mt");
+  flashMob(function(){v.vlsfo=oldB;render()},"Bunk $/mt","solveBF",bHtml2);
 }
 
 var flashTimer=null;
-function flashMob(revertFn,label){
+var spdWIT=null,spdWIR2=null,spdWIBtnM=null,spdWIBtnMO=null;
+function mInterpC(eSpd,eCons,fSpd,fCons,newSpd,mode){
+  if(mode==="curve"){var n=Math.log(fCons/eCons)/Math.log(fSpd/eSpd);var k=eCons/Math.pow(eSpd,n);return k*Math.pow(newSpd,n)}
+  return eCons+(newSpd-eSpd)*(fCons-eCons)/(fSpd-eSpd);
+}
+function speedWI(vi,oi,delta,btnEl,mode){
+  var v=V[vi],p=v.preset?PR[v.preset]:null;
+  if(!p)return;
+  if(spdWIT){clearInterval(spdWIT);spdWIT=null}
+  if(spdWIR2){clearTimeout(spdWIR2);spdWIR2=null}
+  if(spdWIBtnM&&spdWIBtnMO){spdWIBtnM.innerHTML=spdWIBtnMO}
+  mode=mode||"line";
+  var eS=p.eco,fS=p.full;
+  var oBS=v.bSpeed,oLS=v.lSpeed,oBC=v.bCons,oLC=v.lCons;
+  var newBS=oBS+delta,newLS=oLS+delta;
+  var newBC=mInterpC(eS.bs,eS.bc,fS.bs,fS.bc,newBS,mode);
+  var newLC=mInterpC(eS.ls,eS.lc,fS.ls,fS.lc,newLS,mode);
+  if(newBS<1||newLS<1||newBC<0||newLC<0)return;
+  var consLabel='<span style="color:var(--red);font-size:9px">'+newBC.toFixed(2)+'/'+newLC.toFixed(2)+'</span> ';
+  var origLabel=btnEl?btnEl.textContent:'';
+  var mAttr=mode==="curve"?"c":"l";
+  var oldR=calc(v.options[oi],v);
+  v.bSpeed=newBS;v.lSpeed=newLS;v.bCons=newBC;v.lCons=newLC;
+  render();
+  // Re-find button after render by data attribute
+  var allBtns=document.querySelectorAll('.swb[data-d="'+delta+'"][data-m="'+mAttr+'"]');
+  allBtns.forEach(function(b){b.innerHTML=consLabel+origLabel;spdWIBtnM=b;spdWIBtnMO=origLabel});
+  var newR=calc(v.options[oi],v);
+  var tE=document.getElementById("mt-"+vi+"-"+oi);
+  var nE=document.getElementById("mn-"+vi+"-"+oi);
+  var nvE=document.getElementById("mv-"+vi+"-"+oi);
+  var cpE=document.getElementById("mc-"+vi+"-"+oi);
+  var mbdE=document.getElementById("mbd-"+vi+"-"+oi);
+  var mldE=document.getElementById("mld-"+vi+"-"+oi);
+  var mohE=document.getElementById("moh-"+vi+"-"+oi);
+  var mtvE=document.getElementById("mtv-"+vi+"-"+oi);
+  var dT=newR.gT-oldR.gT,dN=newR.nT-oldR.nT,dV=newR.vN-oldR.vN,dC=newR.cP-oldR.cP;
+  var dBD=newR.bD-oldR.bD,dLD=newR.lD-oldR.lD,dOH=newR.oH-oldR.oH,dTV=newR.tot-oldR.tot;
+  var count=0;
+  spdWIT=setInterval(function(){
+    if(tE){
+      if(count%2===0){
+        tE.textContent="$"+fm(newR.gT);tE.style.color="";
+        if(nE)nE.textContent="net $"+fm(newR.nT);
+        if(nvE)nvE.textContent=fm(newR.vN,0);
+        if(cpE)cpE.textContent=fm(newR.cP,0);
+        if(mbdE)mbdE.textContent=fD(newR.bD);
+        if(mldE)mldE.textContent=fD(newR.lD);
+        if(mohE)mohE.textContent=fD(newR.oH);
+        if(mtvE)mtvE.textContent=fD(newR.tot);
+      }else{
+        tE.textContent=(dT>=0?"+":"")+fm(dT);tE.style.color=dT>=0?"var(--green)":"var(--red)";
+        if(nE)nE.textContent=(dN>=0?"+":"")+fm(dN);
+        if(nvE)nvE.textContent=(dV>=0?"+":"")+fm(dV,0);
+        if(cpE)cpE.textContent=(dC>=0?"+":"")+fm(dC,0);
+        if(mbdE)mbdE.textContent=(dBD>=0?"+":"")+fD(dBD);
+        if(mldE)mldE.textContent=(dLD>=0?"+":"")+fD(dLD);
+        if(mohE)mohE.textContent=(dOH>=0?"+":"")+fD(dOH);
+        if(mtvE)mtvE.textContent=(dTV>=0?"+":"")+fD(dTV);
+      }
+    }
+    count++;
+    if(count>=8){clearInterval(spdWIT);spdWIT=null}
+  },1000);
+  spdWIR2=setTimeout(function(){
+    if(spdWIT){clearInterval(spdWIT);spdWIT=null}
+    if(spdWIBtnM&&spdWIBtnMO){spdWIBtnM.innerHTML=spdWIBtnMO;spdWIBtnM=null;spdWIBtnMO=null}
+    v.bSpeed=oBS;v.lSpeed=oLS;v.bCons=oBC;v.lCons=oLC;
+    render();
+  },8000);
+}
+function flashMob(revertFn,label,btnKey,valText){
   if(flashTimer)clearTimeout(flashTimer);
-  // Find the card by label text
   var cards=document.querySelectorAll('.f');
   var target=null;
   cards.forEach(function(c){var fl=c.querySelector('.fl');if(fl&&fl.textContent.trim().toUpperCase()===label.toUpperCase())target=c});
@@ -182,10 +257,15 @@ function flashMob(revertFn,label){
     var iv=setInterval(function(){
       target.style.background=(count%2===0)?'rgba(212,168,83,.25)':'rgba(224,122,95,.2)';
       count++;
-      if(count>=12){clearInterval(iv);target.style.background=''}
-    },500);
+      if(count>=8){clearInterval(iv);target.style.background=''}
+    },1000);
   }
-  flashTimer=setTimeout(function(){revertFn()},6000);
+  var solverBtn=null,solverOrig=null;
+  if(btnKey&&valText){
+    var allBtns=document.querySelectorAll('[onclick*="'+btnKey+'"]');
+    if(allBtns.length>0){solverBtn=allBtns[0];solverOrig=solverBtn.innerHTML;solverBtn.innerHTML=valText}
+  }
+  flashTimer=setTimeout(function(){if(solverBtn&&solverOrig)solverBtn.innerHTML=solverOrig;revertFn()},8000);
 }
 
 function calc(o,v){
@@ -211,6 +291,16 @@ function solveH(si,so,ti,to){
   if(vt.dop){var oH=bD+lD+pD,bB=bD*bCn*vt.vlsfo,pB=pD*vt.portCons*vt.vlsfo,tB=bB+lB+pB;op.hire=Math.round((tCP-tB)/(oH*(1-cm)))}
   else{var oH=lD+pD,pB=pD*vt.portCons*vt.vlsfo;op.hire=Math.round(((tCP-lB-pB)/(1-cm)+1000000)/(oH+100))}
   op.bbOverride=false;op.bb=null;render();
+  flashCP();
+}
+
+function flashCP(){
+  var cpEls=document.querySelectorAll('[id^="mc-"],.cp-flash');
+  var fc=0;var fi=setInterval(function(){
+    var bg=(fc%2===0)?'rgba(212,168,83,.2)':'rgba(224,122,95,.15)';
+    cpEls.forEach(function(e){e.style.background=bg;e.style.borderRadius='3px'});
+    fc++;if(fc>=8){clearInterval(fi);cpEls.forEach(function(e){e.style.background=''})}
+  },500);
 }
 
 function render(){
@@ -266,7 +356,7 @@ function render(){
   var isDop=!!v.dop;
   var ivs=v.intakeShow||(v.intakePrice!==0&&v.intakeDelta!==0);
   h+='<div style="margin-bottom:10px">';
-  h+='<div class="st">Voyage Options<div style="display:flex;gap:4px;align-items:center">';
+  h+='<div class="st">Voyage Dets &amp; Hire<div style="display:flex;gap:4px;align-items:center">';
   h+='<button class="itgl'+(ivs?' on':'')+'" onclick="V['+vi+'].intakeShow=!V['+vi+'].intakeShow;render()">\u0394 Intake</button>';
   h+='<div class="ad"><button class="'+(isDop?'':' on')+'" onclick="V['+vi+'].dop=false;render()">APS</button><button class="'+(isDop?' on':'')+'" onclick="V['+vi+'].dop=true;render()">DOP</button></div>';
   h+='<button class="prs'+(v.p6Used?" on":"")+'" onclick="doP6('+vi+')">\u29C9 P6</button>';
@@ -310,15 +400,15 @@ function render(){
     if(r.dp)h+='<span class="rdp">DOP</span>';
     if(isB)h+='<span class="rbg">Best</span>';
     h+='</div><div class="ron">'+es(o.name)+'</div></div>';
-    h+='<div class="tce"><div class="tl">Gross TCE</div><div class="tv'+(tc?" c"+tc:"")+'">$'+fm(r.gT)+'</div><div class="tn'+(tc?" c"+tc:"")+'">net $'+fm(r.nT)+'</div></div></div>';
+    h+='<div class="tce"><div class="tl">Gross TCE</div><div class="tv'+(tc?" c"+tc:"")+'" id="mt-'+vi+'-'+oi+'">$'+fm(r.gT)+'</div><div class="tn'+(tc?" c"+tc:"")+'" id="mn-'+vi+'-'+oi+'">net $'+fm(r.nT)+'</div></div></div>';
     // Voyage Duration
     h+='<div class="rsh" style="display:flex;justify-content:space-between;align-items:center">Voyage Duration<div style="display:flex;align-items:center;gap:3px"><span style="font-size:8px;color:var(--dim2);font-weight:400;text-transform:none;letter-spacing:0">Sp/Cons basis</span><div class="ad" style="font-size:9px"><button class="'+(isAbout?"":"on")+'" onclick="isAbout=false;render()" style="padding:1px 6px;font-size:9px">NOM</button><button class="'+(isAbout?"on":"")+'" onclick="isAbout=true;render()" style="padding:1px 6px;font-size:9px;'+(isAbout?"background:rgba(224,122,95,.12);color:var(--gld)":"")+'">ABOUT</button></div></div></div>';
-    h+=rr2("Ballast",fm(o.bDist)+" nm",fD(r.bD)+"d","mut","","",ref?cc(r.bD,ref.bD):"");
-    h+=rr2("Laden",fm(o.lDist)+" nm",fD(r.lD)+"d","mut","","",ref?cc(r.lD,ref.lD):"");
+    h+='<div class="rr"><span class="rl">Ballast</span><span class="rv mut" style="flex:1;text-align:right">'+fm(o.bDist)+' nm</span><span class="rv'+(ref?" c"+(cc(r.bD,ref.bD)||""):"")+'" style="flex:1;text-align:right"><span id="mbd-'+vi+'-'+oi+'">'+fD(r.bD)+'</span>d</span></div>';
+    h+='<div class="rr"><span class="rl">Laden</span><span class="rv mut" style="flex:1;text-align:right">'+fm(o.lDist)+' nm</span><span class="rv'+(ref?" c"+(cc(r.lD,ref.lD)||""):"")+'" style="flex:1;text-align:right"><span id="mld-'+vi+'-'+oi+'">'+fD(r.lD)+'</span>d</span></div>';
     h+=rr3("Port L/D",fD(r.pD)+"d","","");
     if(anyOH){h+=(r.oh>0)?rr3("Off-hire",fD(r.oh)+"d","red",""):rr("Off-hire","","","");}
-    h+=rr3("On Hire",fD(r.oH)+"d","gld b",ref?cc(r.oH,ref.oH):"");
-    h+=rrh3("Total Voyage",fD(r.tot)+"d","b",ref?cc(r.tot,ref.tot):"");
+    h+='<div class="rr"><span class="rl">On Hire</span><span style="flex:1"></span><span class="rv gld b'+(ref?" c"+(cc(r.oH,ref.oH)||""):"")+'" style="flex:1;text-align:right"><span id="moh-'+vi+'-'+oi+'">'+fD(r.oH)+'</span>d</span></div>';
+    h+='<div class="rr hl"><span class="rl">Total Voyage</span><span style="flex:1"></span><span class="rv b'+(ref?" c"+(cc(r.tot,ref.tot)||""):"")+'" style="flex:1;text-align:right"><span id="mtv-'+vi+'-'+oi+'">'+fD(r.tot)+'</span>d</span></div>';
     // Bunker Costs
     h+='<div class="rsh">Bunker Costs</div>';
     h+=rr2("Ballast",fm(r.dB,0)+"/d",fm(r.bB,0),"mut","red",ref?cc(-r.dB,-ref.dB):"",ref?cc(-r.bB,-ref.bB):"");
@@ -336,21 +426,43 @@ function render(){
     }
     if(anyOH){h+=(r.oh>0)?rr3("Off-hire bunk","("+fm(r.ohB,0)+")","red",""):rr("Off-hire bunk","","","");}
     var nvCmp=ref?cc(r.vN,ref.vN):"";
-    h+='<div class="rr hl"><span class="rl">Net Voyage</span><span class="rv mut" style="flex:1;text-align:right">'+fD(r.tot)+'d</span><span class="rv b'+(nvCmp?" c"+nvCmp:"")+'" style="flex:1;text-align:right">'+fm(r.vN,0)+'</span></div>';
-    h+='<div class="rdv">'+rr2("Charterer Pays",fD(r.oH)+"d",fm(r.cP,0),"mut","mut b","",ref?cc(r.cP,ref.cP):"")+'</div>';
+    h+='<div class="rr hl"><span class="rl">Net Voyage</span><span class="rv mut" style="flex:1;text-align:right">'+fD(r.tot)+'d</span><span class="rv b'+(nvCmp?" c"+nvCmp:"")+'" id="mv-'+vi+'-'+oi+'" style="flex:1;text-align:right">'+fm(r.vN,0)+'</span></div>';
+    var cpCmp=ref?cc(r.cP,ref.cP):"";
+    h+='<div class="rdv"><div class="rr"><span class="rl">Charterer Pays</span><span class="rv mut" style="flex:1;text-align:right">'+fD(r.oH)+'d</span><span class="rv mut b'+(cpCmp?" c"+cpCmp:"")+'" id="mc-'+vi+'-'+oi+'" style="flex:1;text-align:right">'+fm(r.cP,0)+'</span></div></div>';
     // Intake
     if(r.iv!==0){var iAdj=-r.iv;h+=rr3("Intake "+(V[vi].intakeDelta>0?"+":"")+fm(V[vi].intakeDelta)+"MT",(iAdj>0?"+":"")+fm(iAdj,0),iAdj>0?"red":"grn","");h+=rrh3("Adj. Chrt Pays",fm(r.aCP,0),"gld b",ref?cc(r.aCP,ref.aCP):"")}
-    if(multi){if(vi===0){for(var tv=1;tv<V.length;tv++){if(oi<V[tv].options.length){var d=r.aCP-aR[tv][oi].aCP;var dc=Math.abs(d)<1?"var(--dim)":(d>0?"var(--red)":"var(--green)");h+='<div class="dln" style="color:'+dc+'">\u0394 '+(Math.abs(d)<1?"matched":(d>0?"+"+fm(d):fm(d)))+'</div>';h+='<div class="mbtn" onclick="solveH('+tv+','+oi+',0,'+oi+')">Adjust hire \u2192 same CP as '+es(V[tv].name)+'</div>'}}}
-    else{if(oi<aR[0].length){var d2=r.aCP-aR[0][oi].aCP;var dc2=Math.abs(d2)<1?"var(--dim)":(d2>0?"var(--red)":"var(--green)");h+='<div class="dln" style="color:'+dc2+'">\u0394 '+(Math.abs(d2)<1?"matched":(d2>0?"+"+fm(d2):fm(d2)))+'</div>';h+='<div class="mbtn" onclick="solveH(0,'+oi+','+vi+','+oi+')">Adjust hire \u2192 same CP as '+es(v0.name)+'</div>'}}}
-    // Eco=Full solver buttons
-    if(v.preset&&PR[v.preset]){
-      h+='<div style="display:flex;gap:4px;margin-top:6px">';
-      h+='<div class="mbtn" onclick="solveEF('+vi+','+oi+')" style="background:rgba(212,168,83,.08);border-color:rgba(212,168,83,.2);color:var(--gld);margin-top:0;flex:1">Calc Hire Eco\u2009=\u2009Full</div>';
-      h+='<div class="mbtn" onclick="solveBF('+vi+','+oi+')" style="background:rgba(212,168,83,.08);border-color:rgba(212,168,83,.2);color:var(--gld);margin-top:0;flex:1">Calc Bunk Eco\u2009=\u2009Full</div>';
+    h+='</div>';
+  }
+
+  // TOOLS - only for active vessel
+  h+='<div style="margin:10px 0"><div class="st" onclick="toolsOpen=!toolsOpen;render()" style="cursor:pointer">Tools <span style="font-size:12px">'+(toolsOpen?'\u25B2':'\u25BC')+'</span></div>';
+  if(toolsOpen){
+  var tv2=V[vi];
+  for(var tj=0;tj<tv2.options.length;tj++){
+    var to=tv2.options[tj],tr=aR[vi][tj],tref=(vi>0&&tj<aR[0].length)?aR[0][tj]:null;
+    h+='<div class="rc" style="padding:6px 8px;margin-bottom:4px">';
+    if(multi){if(vi===0){for(var ttv=1;ttv<V.length;ttv++){if(tj<V[ttv].options.length){h+='<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px"><span style="font-size:8px;color:var(--dim);line-height:1.2;white-space:nowrap"><u>Adjust</u> hire so Charterer pays</span><div class="ob" onclick="solveH('+ttv+','+tj+',0,'+tj+');this.style.background=\'rgba(224,122,95,.15)\';this.style.color=\'var(--gld)\'" style="font-size:11px;padding:4px 8px">same with '+es(V[ttv].name)+'</div></div>'}}}
+    else{if(tj<aR[0].length){h+='<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px"><span style="font-size:8px;color:var(--dim);line-height:1.2;white-space:nowrap"><u>Adjust</u> hire so Charterer pays</span><div class="ob" onclick="solveH(0,'+tj+','+vi+','+tj+');this.style.background=\'rgba(224,122,95,.15)\';this.style.color=\'var(--gld)\'" style="font-size:11px;padding:4px 8px">same with '+es(V[0].name)+'</div></div>'}}}
+    if(tv2.preset&&PR[tv2.preset]){
+      var mdlbls=["\u22121.0kn","\u22120.5kn","+0.5kn","+1.0kn"],mdvals=[-1,-0.5,0.5,1];
+      h+='<div style="display:flex;gap:3px;margin-top:4px;align-items:center">';
+      h+='<span style="font-size:7px;color:var(--dim2);white-space:nowrap;line-height:1.2;margin-right:2px"><u>Test</u> Eco\u2009=\u2009Full for<br>Charterer by changing</span>';
+      h+='<button class="ob" onclick="solveEF('+vi+','+tj+')" style="font-size:11px;padding:2px 5px">Hire</button>';
+      h+='<button class="ob" onclick="solveBF('+vi+','+tj+')" style="font-size:11px;padding:2px 5px">Bkr price</button>';
+      h+='</div>';
+      h+='<div style="display:flex;gap:3px;margin-top:4px;flex-wrap:wrap;align-items:center">';
+      h+='<span style="font-size:7px;color:var(--dim2);margin-right:2px;line-height:1.2"><u>test</u> basis<br>straight line</span>';
+      for(var di=0;di<4;di++){h+='<button class="ob swb" data-d="'+mdvals[di]+'" data-m="l" onclick="speedWI('+vi+','+tj+','+mdvals[di]+',this,\'line\')" style="font-size:11px;padding:2px 5px">'+mdlbls[di]+'</button>'}
+      h+='</div>';
+      h+='<div style="display:flex;gap:3px;margin-top:2px;flex-wrap:wrap;align-items:center">';
+      h+='<span style="font-size:7px;color:var(--dim2);opacity:.6;margin-right:2px;line-height:1.2"><u>test</u> basis<br>power curve</span>';
+      for(var di=0;di<4;di++){h+='<button class="ob swb" data-d="'+mdvals[di]+'" data-m="c" onclick="speedWI('+vi+','+tj+','+mdvals[di]+',this,\'curve\')" style="font-size:11px;padding:2px 5px">'+mdlbls[di]+'</button>'}
       h+='</div>';
     }
     h+='</div>';
   }
+  }
+  h+='</div>';
 
   // Summary
   if(fl.length>1){var nc=fl.length,hasIk=V.some(function(v){return v.intakeShow&&v.intakeDelta!==0});var cols="55px repeat("+nc+",1fr)";
@@ -358,7 +470,7 @@ function render(){
     h+='<div></div>';for(var k=0;k<fl.length;k++){var nm=multi?(V[fl[k].vi].name.substring(0,5)+"/"+V[fl[k].vi].options[fl[k].oi].name.substring(0,5)):V[fl[k].vi].options[fl[k].oi].name;h+='<div class="sh">'+es(nm)+'</div>'}
     var ms=[["Gross",function(f){return f.r.gT},function(f){return fm(f.r.gT)},1,0],["Net",function(f){return f.r.nT},function(f){return fm(f.r.nT)},0,0],["Days",function(f){return f.r.tot},function(f){return fD(f.r.tot)},0,0],["Net Voy",function(f){return f.r.vN},function(f){return fm(f.r.vN)},0,0],["Bunk",function(f){return f.r.tB},function(f){return fm(f.r.tB)},0,1],["CP",function(f){return f.r.cP},function(f){return fm(f.r.cP)},0,0]];
     if(hasIk)ms.push(["Adj CP",function(f){return f.r.aCP},function(f){return fm(f.r.aCP)},0,0]);
-    for(var m=0;m<ms.length;m++){h+='<div class="slb">'+ms[m][0]+'</div>';for(var k=0;k<fl.length;k++){var fk=fl[k],ibr=m===0&&fk.r.gT===bst,rR=fk.vi>0&&fk.oi<aR[0].length?aR[0][fk.oi]:null,cv=ms[m][1](fk),rvl=rR?ms[m][1]({r:rR}):null,cl="";if(ibr)cl=" gld";else if(rR){var inv=ms[m][4],a=inv?-cv:cv,b=inv?-rvl:rvl;if(a>b+.5)cl=" cup";else if(a<b-.5)cl=" cdn"}h+='<div class="sv'+(ms[m][3]?" b":"")+cl+'">'+ms[m][2](fk)+'</div>'}}
+    for(var m=0;m<ms.length;m++){h+='<div class="slb">'+ms[m][0]+'</div>';for(var k=0;k<fl.length;k++){var fk=fl[k],ibr=m===0&&fk.r.gT===bst,rR=fk.vi>0&&fk.oi<aR[0].length?aR[0][fk.oi]:null,cv=ms[m][1](fk),rvl=rR?ms[m][1]({r:rR}):null,cl="";if(ibr)cl=" gld";else if(rR){var inv=ms[m][4],a=inv?-cv:cv,b=inv?-rvl:rvl;if(a>b+.5)cl=" cup";else if(a<b-.5)cl=" cdn"}var dHtml="";if(fk.vi>0&&rR&&rvl!==null&&Math.abs(cv-rvl)>0.5){var dv=cv-rvl;var dvF=(m===2)?fD(dv):fm(dv);dHtml='<span style="font-weight:700;font-size:9px;color:'+(((ms[m][4])?(-cv>-rvl+0.5):(cv>rvl+0.5))?'var(--green)':'var(--red)')+';position:absolute;right:0;top:50%;transform:translateY(-50%)">'+((dv>=0?"+":"")+dvF)+'</span>'}h+='<div class="sv'+(ms[m][3]?" b":"")+cl+(ms[m][0]==="CP"?" cp-flash":"")+'" style="position:relative">'+ms[m][2](fk)+dHtml+'</div>'}}
     h+='<div class="slb sdr sdrl">\u0394 best</div>';for(var k=0;k<fl.length;k++){var d=fl[k].r.gT-bst;h+='<div class="sv b sdr sdrv'+(d===0?" cup":" cdn")+'">'+(d===0?"\u2014":fm(d))+'</div>'}
     h+='</div></div></div>'}
 

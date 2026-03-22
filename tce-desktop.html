@@ -59,6 +59,10 @@ label.lbl{font-size:10px;color:var(--dim);margin-bottom:2px;display:block}
 .aps-dop button{background:var(--dim3);color:var(--dim);border:none;padding:2px 8px;cursor:pointer;font-family:inherit;font-size:10px;font-weight:600}
 .aps-dop button.on{background:var(--gld-bg);color:var(--gld)}
 .nom-about button.on[data-setnomabout="about"]{background:var(--orn);color:var(--gld)}
+.spd-btns{display:flex;gap:3px;margin:4px 0 2px;align-items:center}
+.spd-btn{font-size:9px;padding:2px 5px;border-radius:3px;cursor:pointer;font-family:inherit;font-weight:600;border:1px solid var(--brd2);background:var(--dim3);color:var(--dim);white-space:nowrap}
+.spd-btn:hover{border-color:var(--gld-brd);color:var(--gld)}
+.flash-val{transition:opacity .15s}
 .intake-row{display:grid;grid-template-columns:40px 1fr 40px 1fr;gap:2px 5px;align-items:center;margin-top:4px}
 .bb-wrap{position:relative}
 .bb-auto{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:8px;color:var(--gld);opacity:.5;pointer-events:none;text-transform:uppercase}
@@ -105,7 +109,7 @@ label.lbl{font-size:10px;color:var(--dim);margin-bottom:2px;display:block}
 .delta-line{font-size:9px;font-family:'JetBrains Mono',monospace;text-align:right;margin-top:2px}
 
 .summary-label{font-size:11px;color:var(--dim4)}
-.summary-val{font-size:13px;font-family:'JetBrains Mono',monospace;text-align:center;color:var(--txt);padding:1px 3px}
+.summary-val{font-size:13px;font-family:'JetBrains Mono',monospace;text-align:center;color:var(--txt);padding:1px 3px;overflow:visible}
 .summary-val.bold{font-weight:700}
 .summary-val.cmp-up{background:var(--grn);border-radius:2px}
 .summary-val.cmp-down{background:var(--orn);border-radius:2px}
@@ -166,6 +170,7 @@ var vessels=[
 /*VESSELS_END*/
 var undoStack=[],redoStack=[],undoing=false;
 var isAbout=false;
+var toolsOpen=false;
 function saveUndo(){if(undoing)return;undoStack.push(JSON.stringify(vessels));if(undoStack.length>30)undoStack.shift();redoStack=[]}
 function doUndo(){if(undoStack.length<2)return;undoing=true;redoStack.push(undoStack.pop());vessels=JSON.parse(undoStack[undoStack.length-1]);renderVessels();renderResults();undoing=false}
 function doRedo(){if(redoStack.length<1)return;undoing=true;var s=redoStack.pop();undoStack.push(s);vessels=JSON.parse(s);renderVessels();renderResults();undoing=false}
@@ -218,10 +223,15 @@ function solveEcoFull(vi,oi){
     newHire=Math.round(numr/denm);
   }
   var oldHire=opt.hire,oldBB=opt.bb,oldBBO=opt.bbOverride;
+  var dH=newHire-oldHire;
+  var btnHtml='Hire <span style="color:var(--red);font-size:9px">'+fmt(newHire)+' <span style="font-size:7px">'+(dH>=0?"+":"")+fmt(dH)+'</span></span>';
+  if(!isDop){var newBB2=autoBB(newHire),oldBB2=getBB(opt),dBB2=newBB2-oldBB2;
+    btnHtml+='<br><span style="color:var(--red);font-size:8px">BB '+fmt(newBB2)+' <span style="font-size:7px">'+(dBB2>=0?"+":"")+fmt(dBB2)+'</span></span>'}
   opt.hire=newHire;opt.bbOverride=false;opt.bb=null;
   renderAll();
   flashRevert(function(){opt.hire=oldHire;opt.bb=oldBB;opt.bbOverride=oldBBO;renderAll()},
-    'input[data-vi="'+vi+'"][data-oi="'+oi+'"][data-of="hire"]');
+    'input[data-vi="'+vi+'"][data-oi="'+oi+'"][data-of="hire"]',
+    'button[data-ecofull-vi="'+vi+'"]',btnHtml);
 }
 
 function solveBunkEcoFull(vi,oi){
@@ -243,14 +253,92 @@ function solveBunkEcoFull(vi,oi){
     if(Math.abs(denm)<0.001)return;
     newBunk=Math.round(numr/denm);
   }
-  var oldBunk=v.vlsfo;
+  var oldBunk=v.vlsfo,dB=newBunk-oldBunk;
+  var btnHtml='Bunker price <span style="color:var(--red);font-size:9px">'+fmt(newBunk)+' <span style="font-size:7px">'+(dB>=0?"+":"")+fmt(dB)+'</span></span>';
   v.vlsfo=newBunk;
   renderAll();
   flashRevert(function(){v.vlsfo=oldBunk;renderAll()},
-    'input[data-vi="'+vi+'"][data-vf="vlsfo"]');
+    'input[data-vi="'+vi+'"][data-vf="vlsfo"]',
+    'button[data-bunkef-vi="'+vi+'"]',btnHtml);
 }
 
-function flashRevert(revertFn,selector){
+var spdWITimer=null,spdWIRevert=null,spdWIBtn=null,spdWIBtnOrig=null;
+function interpCons(eSpd,eCons,fSpd,fCons,newSpd,mode){
+  if(mode==="curve"){
+    var n=Math.log(fCons/eCons)/Math.log(fSpd/eSpd);
+    var k=eCons/Math.pow(eSpd,n);
+    return k*Math.pow(newSpd,n);
+  }
+  return eCons+(newSpd-eSpd)*(fCons-eCons)/(fSpd-eSpd);
+}
+function speedWhatIf(vi,oi,delta,btnEl,mode){
+  var v=vessels[vi],p=v.preset?PRESETS[v.preset]:null;
+  if(!p)return;
+  if(spdWITimer){clearInterval(spdWITimer);spdWITimer=null}
+  if(spdWIRevert){clearTimeout(spdWIRevert);spdWIRevert=null}
+  if(spdWIBtn&&spdWIBtnOrig){spdWIBtn.innerHTML=spdWIBtnOrig}
+  mode=mode||"line";
+  var eS=p.eco,fS=p.full;
+  var oBS=v.bSpeed,oLS=v.lSpeed,oBC=v.bCons,oLC=v.lCons;
+  var newBS=oBS+delta,newLS=oLS+delta;
+  var newBC=interpCons(eS.bSpeed,eS.bCons,fS.bSpeed,fS.bCons,newBS,mode);
+  var newLC=interpCons(eS.lSpeed,eS.lCons,fS.lSpeed,fS.lCons,newLS,mode);
+  if(newBS<1||newLS<1||newBC<0||newLC<0)return;
+  var consLabel='<span style="color:var(--red);font-size:9px">'+newBC.toFixed(2)+'/'+newLC.toFixed(2)+'</span> ';
+  var origLabel=btnEl?btnEl.textContent:'';
+  var oldR=calc(v.options[oi],v);
+  v.bSpeed=newBS;v.lSpeed=newLS;v.bCons=newBC;v.lCons=newLC;
+  renderResults();
+  // Re-find button after render and show cons
+  var mAttr=mode==="curve"?"c":"l";
+  var allSBtns=document.querySelectorAll('.spd-btn[data-swi-d="'+delta+'"][data-swi-vi="'+vi+'"][data-swi-m="'+mAttr+'"]');
+  allSBtns.forEach(function(b){b.innerHTML=consLabel+origLabel;spdWIBtn=b;spdWIBtnOrig=origLabel});
+  var newR=calc(v.options[oi],v);
+  var tceEl=document.getElementById("tce-"+vi+"-"+oi);
+  var netEl=document.getElementById("net-"+vi+"-"+oi);
+  var nvEl=document.getElementById("nv-"+vi+"-"+oi);
+  var cpEl=document.getElementById("cp-"+vi+"-"+oi);
+  var bdEl=document.getElementById("bd-"+vi+"-"+oi);
+  var ldEl=document.getElementById("ld-"+vi+"-"+oi);
+  var ohEl=document.getElementById("oh-"+vi+"-"+oi);
+  var tvEl=document.getElementById("tv-"+vi+"-"+oi);
+  var dTCE=newR.gTCE-oldR.gTCE,dNet=newR.nTCE-oldR.nTCE,dNV=newR.vN-oldR.vN,dCP=newR.cP-oldR.cP;
+  var dBD=newR.bD-oldR.bD,dLD=newR.lD-oldR.lD,dOH=newR.onH-oldR.onH,dTV=newR.tot-oldR.tot;
+  var count=0;
+  spdWITimer=setInterval(function(){
+    if(tceEl){
+      if(count%2===0){
+        tceEl.textContent="$"+fmt(newR.gTCE,0);tceEl.style.color="";
+        if(netEl)netEl.textContent="net $"+fmt(newR.nTCE,0);
+        if(nvEl)nvEl.textContent=fmt(newR.vN,0);
+        if(cpEl)cpEl.textContent=fmt(newR.cP,0);
+        if(bdEl)bdEl.textContent=fmtD(newR.bD);
+        if(ldEl)ldEl.textContent=fmtD(newR.lD);
+        if(ohEl)ohEl.textContent=fmtD(newR.onH);
+        if(tvEl)tvEl.textContent=fmtD(newR.tot);
+      }else{
+        tceEl.textContent=(dTCE>=0?"+":"")+fmt(dTCE,0);tceEl.style.color=dTCE>=0?"var(--green)":"var(--red)";
+        if(netEl)netEl.textContent=(dNet>=0?"+":"")+fmt(dNet,0);
+        if(nvEl)nvEl.textContent=(dNV>=0?"+":"")+fmt(dNV,0);
+        if(cpEl)cpEl.textContent=(dCP>=0?"+":"")+fmt(dCP,0);
+        if(bdEl)bdEl.textContent=(dBD>=0?"+":"")+fmtD(dBD);
+        if(ldEl)ldEl.textContent=(dLD>=0?"+":"")+fmtD(dLD);
+        if(ohEl)ohEl.textContent=(dOH>=0?"+":"")+fmtD(dOH);
+        if(tvEl)tvEl.textContent=(dTV>=0?"+":"")+fmtD(dTV);
+      }
+    }
+    count++;
+    if(count>=8){clearInterval(spdWITimer);spdWITimer=null}
+  },1000);
+  spdWIRevert=setTimeout(function(){
+    if(spdWITimer){clearInterval(spdWITimer);spdWITimer=null}
+    if(spdWIBtn&&spdWIBtnOrig){spdWIBtn.innerHTML=spdWIBtnOrig;spdWIBtn=null;spdWIBtnOrig=null}
+    v.bSpeed=oBS;v.lSpeed=oLS;v.bCons=oBC;v.lCons=oLC;
+    renderResults();
+  },8000);
+}
+
+function flashRevert(revertFn,selector,btnSel,valText){
   var el=document.querySelector(selector);
   if(el){
     var wrap=el.closest('.u-wrap')||el.closest('.bb-wrap')||el.parentElement;
@@ -259,10 +347,13 @@ function flashRevert(revertFn,selector){
       wrap.style.background=(count%2===0)?'rgba(212,168,83,.25)':'rgba(224,122,95,.2)';
       wrap.style.borderRadius='4px';
       count++;
-      if(count>=12){clearInterval(iv);wrap.style.background=''}
-    },500);
+      if(count>=8){clearInterval(iv);wrap.style.background=''}
+    },1000);
   }
-  setTimeout(function(){revertFn()},6000);
+  var btn=btnSel?document.querySelector(btnSel):null;
+  var btnOrig=null;
+  if(btn&&valText){btnOrig=btn.innerHTML;btn.innerHTML=valText}
+  setTimeout(function(){if(btn&&btnOrig)btn.innerHTML=btnOrig;revertFn()},8000);
 }
 
 function calc(opt,v){
@@ -352,10 +443,10 @@ function buildVessel(vi){
   h+='<div><label class="lbl">Port Cons</label><div class="u-wrap"><input class="inp" type="number" value="'+fmtD2(v.portCons)+'" step="0.01" data-vi="'+vi+'" data-vf="portCons" style="padding-right:30px"><span class="u-lbl">MT</span></div></div>';
   h+='</div>';
 
-  // Voyage Options section
+  // Voyage Dets &amp; Hire section
   var isDopV=!!v.dop;
   var iv=v.intakeShow||(v.intakePrice!==0&&v.intakeDelta!==0);
-  h+='<div class="sec-hdr-row" style="margin-top:8px"><div style="display:flex;align-items:center;gap:10px"><div class="card-title" style="margin-bottom:0">Voyage Options</div>';
+  h+='<div class="sec-hdr-row" style="margin-top:8px"><div style="display:flex;align-items:center;gap:10px"><div class="card-title" style="margin-bottom:0">Voyage Dets &amp; Hire</div>';
   h+='<button class="intake-toggle'+(iv?' on':'')+'" data-toggleintake="'+vi+'">\u0394 Intake</button>';
   h+='<div class="aps-dop"><button class="'+(isDopV?'':' on')+'" data-vi="'+vi+'" data-setdop="0">APS</button><button class="'+(isDopV?' on':'')+'" data-vi="'+vi+'" data-setdop="1">DOP</button></div></div>';
   h+='<div style="display:flex;gap:4px;align-items:center;margin-left:auto">';
@@ -525,18 +616,18 @@ function renderResults(){
         h+='<div><div class="tce-label">Gross TCE</div>';
         var tceCmp=(ref!==null)?cmpCls(r.gTCE,ref.gTCE):"";
         var tceBg=tceCmp===" cmp-up"?"tce-cmp-up":tceCmp===" cmp-down"?"tce-cmp-down":"";
-        h+='<div class="tce-value '+tceBg+'">$'+fmt(r.gTCE,0)+'</div>';
-        h+='<div class="tce-gross '+tceBg+'">net $'+fmt(r.nTCE,0)+'</div>';
+        h+='<div class="tce-value '+tceBg+'" id="tce-'+vi+'-'+oi+'">$'+fmt(r.gTCE,0)+'</div>';
+        h+='<div class="tce-gross '+tceBg+'" id="net-'+vi+'-'+oi+'">net $'+fmt(r.nTCE,0)+'</div>';
         h+='</div></div>';
 
         // Duration
         h+='<div class="sec-head" style="display:flex;justify-content:space-between;align-items:center">Voyage Duration<div style="display:flex;align-items:center;gap:4px"><span style="font-size:8px;color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">Sp/Cons basis</span><div class="aps-dop nom-about" style="font-size:8px"><button class="'+(isAbout?'':' on')+'" data-setnomabout="nom" style="padding:1px 6px;font-size:8px">NOM</button><button class="'+(isAbout?' on':'')+'" data-setnomabout="about" style="padding:1px 6px;font-size:8px">ABOUT</button></div></div></div>';
-        h+=rw("Ballast",vl(fmt(opt.bDist)+" nm","sm"),vl(fmtD(r.bD)+"d",(ref?cc(r.bD,ref.bD):"")),1);
-        h+=rw("Laden",vl(fmt(opt.lDist)+" nm","sm"),vl(fmtD(r.lD)+"d",(ref?cc(r.lD,ref.lD):"")),1);
+        h+=rw("Ballast",vl(fmt(opt.bDist)+" nm","sm"),vl('<span id="bd-'+vi+'-'+oi+'">'+fmtD(r.bD)+'</span>d',(ref?cc(r.bD,ref.bD):"")),1);
+        h+=rw("Laden",vl(fmt(opt.lDist)+" nm","sm"),vl('<span id="ld-'+vi+'-'+oi+'">'+fmtD(r.lD)+'</span>d',(ref?cc(r.lD,ref.lD):"")),1);
         h+=rw("Port L/D","",vl(fmtD(r.pD)+"d"),1);
         if(anyOH){h+=(r.oh>0)?rw("Off-hire","",vl(fmtD(r.oh)+"d","red"),1):rw("Off-hire","","",1)}
-        h+=rw("On Hire","",vl(fmtD(r.onH)+"d","bold gold"+(ref?cc(r.onH,ref.onH):"")),1);
-        h+=rw("Total Voyage","",vl(fmtD(r.tot)+"d","bold"+(ref?cc(r.tot,ref.tot):"")),0,1);
+        h+=rw("On Hire","",vl('<span id="oh-'+vi+'-'+oi+'">'+fmtD(r.onH)+'</span>d',"bold gold"+(ref?cc(r.onH,ref.onH):"")),1);
+        h+=rw("Total Voyage","",vl('<span id="tv-'+vi+'-'+oi+'">'+fmtD(r.tot)+'</span>d',"bold"+(ref?cc(r.tot,ref.tot):"")),0,1);
 
         // Bunkers
         h+='<div class="sec-head">Bunker Costs</div>';
@@ -558,8 +649,8 @@ function renderResults(){
           }
         }
         if(anyOHrev){h+=(r.oh>0)?rw("Off-hire bunk","",vl("("+fmt(r.ohB,0)+")","red"),1):rw("Off-hire bunk","","",1)}
-        h+=rw("Net Voyage",vl(fmtD(r.tot)+"d","sm"),vl(fmt(r.vN,0),"bold"+(ref?cc(r.vN,ref.vN):"")),0,1);
-        h+='<div class="divider">'+rw("Charterer Pays",vl(fmtD(r.onH)+"d","sm"),vl(fmt(r.cP,0),"bold muted"+(ref?cc(r.cP,ref.cP):"")))+"</div>";
+        h+=rw("Net Voyage",vl(fmtD(r.tot)+"d","sm"),vl('<span id="nv-'+vi+'-'+oi+'">'+fmt(r.vN,0)+'</span>',"bold"+(ref?cc(r.vN,ref.vN):"")),0,1);
+        h+='<div class="divider">'+rw("Charterer Pays",vl(fmtD(r.onH)+"d","sm"),vl('<span id="cp-'+vi+'-'+oi+'">'+fmt(r.cP,0)+'</span>',"bold muted"+(ref?cc(r.cP,ref.cP):"")))+"</div>";
 
         // Intake
         if(anyIntake){
@@ -572,33 +663,6 @@ function renderResults(){
           }
         }
 
-        // Match buttons
-        if(multi){
-          if(vi===0){
-            for(var tvi=1;tvi<vessels.length;tvi++){
-              if(oi<vessels[tvi].options.length){
-                var tgtR=allR[tvi][oi],diff=r.adjCP-tgtR.adjCP;
-                var dc=Math.abs(diff)<1?"var(--dim2)":(diff>0?"var(--red)":"var(--green)");
-                h+='<div class="delta-line" style="color:'+dc+'">\u0394 '+(Math.abs(diff)<1?"matched":(diff>0?"+"+fmt(diff,0):fmt(diff,0)))+'</div>';
-                h+='<button class="btn-match" data-srcvi="'+tvi+'" data-srcoi="'+oi+'" data-tgtvi="0" data-tgtoi="'+oi+'">Adjust hire so Charterer pays same with '+esc(vessels[tvi].name)+'</button>';
-              }
-            }
-          }else{
-            if(oi<vessels[0].options.length){
-              var diff2=r.adjCP-allR[0][oi].adjCP;
-              var dc2=Math.abs(diff2)<1?"var(--dim2)":(diff2>0?"var(--red)":"var(--green)");
-              h+='<div class="delta-line" style="color:'+dc2+'">\u0394 '+(Math.abs(diff2)<1?"matched":(diff2>0?"+"+fmt(diff2,0):fmt(diff2,0)))+'</div>';
-              h+='<button class="btn-match" data-srcvi="0" data-srcoi="'+oi+'" data-tgtvi="'+vi+'" data-tgtoi="'+oi+'">Adjust hire so Charterer pays same with '+esc(vessels[0].name)+'</button>';
-            }
-          }
-        }
-        // Eco=Full solver buttons
-        if(v.preset&&PRESETS[v.preset]){
-          h+='<div style="display:flex;gap:4px;margin-top:6px">';
-          h+='<button class="btn-match" style="background:var(--gld-bg4);border-color:var(--gld-brd);color:var(--gld);margin-top:0;flex:1" data-ecofull-vi="'+vi+'" data-ecofull-oi="'+oi+'">Calc Hire when Eco\u2009=\u2009Full</button>';
-          h+='<button class="btn-match" style="background:var(--gld-bg4);border-color:var(--gld-brd);color:var(--gld);margin-top:0;flex:1" data-bunkef-vi="'+vi+'" data-bunkef-oi="'+oi+'">Calc Bunkers when Eco\u2009=\u2009Full</button>';
-          h+='</div>';
-        }
         h+='</div>';
       }
       h+='</div>';
@@ -607,11 +671,79 @@ function renderResults(){
     if(nv<4)h+='<div style="flex-shrink:0;width:70px"></div>';
     h+='</div>';
   }
+
+  // TOOLS card
+  h+='<div class="card-title" style="margin-top:14px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:6px" data-toggletools>Tools <span style="font-size:12px">'+(toolsOpen?'\u25B2':'\u25BC')+'</span></div>';
+  h+='<div id="toolsBody" style="'+(toolsOpen?'':'display:none')+'">';
+  for(var oi=0;oi<maxOpts;oi++){
+    var colW2='flex:1;min-width:0';
+    h+='<div class="results-pair" style="margin-top:0;margin-bottom:8px">';
+    for(var vi=0;vi<vessels.length;vi++){
+      h+='<div class="res-col" style="'+colW2+'">';
+      if(oi<vessels[vi].options.length){
+        var v=vessels[vi],opt=v.options[oi],r=allR[vi][oi];
+        var ref=(vi>0&&oi<allR[0].length)?allR[0][oi]:null;
+        h+='<div class="card" style="padding:6px 8px">';
+        // Match buttons
+        if(multi){
+          if(vi===0){
+            for(var tvi=1;tvi<vessels.length;tvi++){
+              if(oi<vessels[tvi].options.length){
+                h+='<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px"><span style="font-size:8px;color:var(--dim);line-height:1.2;white-space:nowrap"><u>Adjust</u> hire so Charterer pays</span><button class="spd-btn" style="font-size:11px;padding:4px 8px" data-srcvi="'+tvi+'" data-srcoi="'+oi+'" data-tgtvi="0" data-tgtoi="'+oi+'">same with '+esc(vessels[tvi].name)+'</button></div>';
+              }
+            }
+          }else{
+            if(oi<vessels[0].options.length){
+              h+='<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px"><span style="font-size:8px;color:var(--dim);line-height:1.2;white-space:nowrap"><u>Adjust</u> hire so Charterer pays</span><button class="spd-btn" style="font-size:11px;padding:4px 8px" data-srcvi="0" data-srcoi="'+oi+'" data-tgtvi="'+vi+'" data-tgtoi="'+oi+'">same with '+esc(vessels[0].name)+'</button></div>';
+            }
+          }
+        }
+        // Eco=Full solver buttons
+        if(v.preset&&PRESETS[v.preset]){
+          var dlbls2=["\u22121.0kn","\u22120.5kn","+0.5kn","+1.0kn"],dvals2=[-1,-0.5,0.5,1];
+          h+='<div style="display:flex;gap:3px;margin-top:4px;align-items:center">';
+          h+='<span style="font-size:7px;color:var(--dim);white-space:nowrap;line-height:1.2;margin-right:2px"><u>Test</u> Eco\u2009=\u2009Full for<br>Charterer by changing</span>';
+          h+='<button class="spd-btn" style="font-size:11px" data-ecofull-vi="'+vi+'" data-ecofull-oi="'+oi+'">Hire</button>';
+          h+='<button class="spd-btn" style="font-size:11px" data-bunkef-vi="'+vi+'" data-bunkef-oi="'+oi+'">Bkr price</button>';
+          h+='</div>';
+          h+='<div class="spd-btns" style="margin-top:4px">';
+          h+='<span style="font-size:7px;color:var(--dim);align-self:center;margin-right:2px"><u>test</u> basis<br>straight line</span>';
+          for(var di=0;di<4;di++){
+            h+='<button class="spd-btn" style="font-size:11px" data-swi-vi="'+vi+'" data-swi-oi="'+oi+'" data-swi-d="'+dvals2[di]+'" data-swi-m="l">'+dlbls2[di]+'</button>';
+          }
+          h+='</div>';
+          h+='<div class="spd-btns" style="margin-top:2px">';
+          h+='<span style="font-size:7px;color:var(--dim);align-self:center;margin-right:2px;opacity:.6"><u>test</u> basis<br>power curve</span>';
+          for(var di=0;di<4;di++){
+            h+='<button class="spd-btn" style="font-size:11px" data-swi-vi="'+vi+'" data-swi-oi="'+oi+'" data-swi-d="'+dvals2[di]+'" data-swi-m="c">'+dlbls2[di]+'</button>';
+          }
+          h+='</div>';
+        }
+        h+='</div>';
+      }else{h+='<div></div>'}
+      h+='</div>';
+    }
+    if(nv===1)h+='<div style="flex:1;min-width:0"></div>';
+    if(nv<4)h+='<div style="flex-shrink:0;width:70px"></div>';
+    h+='</div>';
+  }
+  h+='</div>'; // close toolsBody
   document.getElementById("resultsContainer").innerHTML=h;
+
+  qsa("[data-toggletools]").forEach(function(el){el.addEventListener("click",function(){
+    toolsOpen=!toolsOpen;renderResults();
+  })});
 
   qsa("button[data-srcvi]").forEach(function(el){el.addEventListener("click",function(){
     solveHire(+this.dataset.srcvi,+this.dataset.srcoi,+this.dataset.tgtvi,+this.dataset.tgtoi);
-    this.classList.add("btn-match-flash");var self=this;setTimeout(function(){self.classList.remove("btn-match-flash")},600);
+    this.style.background='var(--orn)';this.style.color='var(--gld)';this.style.borderColor='var(--gld-brd)';
+    // Flash CP in results and summary
+    var cpEls=document.querySelectorAll('[id^="cp-"],.cp-flash');
+    var fc=0;var fi=setInterval(function(){
+      var bg=(fc%2===0)?'rgba(212,168,83,.2)':'rgba(224,122,95,.15)';
+      cpEls.forEach(function(e){e.style.background=bg;e.style.borderRadius='3px'});
+      fc++;if(fc>=8){clearInterval(fi);cpEls.forEach(function(e){e.style.background=''})}
+    },500);
   })});
 
   qsa("button[data-setnomabout]").forEach(function(el){el.addEventListener("click",function(){
@@ -624,6 +756,11 @@ function renderResults(){
 
   qsa("button[data-bunkef-vi]").forEach(function(el){el.addEventListener("click",function(){
     solveBunkEcoFull(+this.dataset.bunkefVi,+this.dataset.bunkefOi);
+  })});
+
+  qsa("button[data-swi-vi]").forEach(function(el){el.addEventListener("click",function(){
+    var mode=this.dataset.swiM==="c"?"curve":"line";
+    speedWhatIf(+this.dataset.swiVi,+this.dataset.swiOi,parseFloat(this.dataset.swiD),this,mode);
   })});
 
   // Summary - aligned with card columns
@@ -667,7 +804,9 @@ function renderResults(){
             var inv=(m===4);var a=inv?-curVal:curVal,b=inv?-refVal:refVal;
             if(a>b+0.5)bgCls=" cmp-up";else if(a<b-0.5)bgCls=" cmp-down";
           }
-          s+='<div class="summary-val '+(metrics[m][3]?"bold":"")+bgCls+'" style="'+(isBR?"color:var(--gld)":"")+'">'+metrics[m][2](rv)+'</div>';
+          var deltaHtml='';
+          if(vvi>0&&refR!==null&&Math.abs(curVal-refVal)>0.5){var dv=curVal-refVal;var dvFmt=(m===2)?fmtD(dv):fmt(dv,0);deltaHtml='<span style="font-weight:700;font-size:11px;color:'+(((m===4)?(-curVal>-refVal+0.5):(curVal>refVal+0.5))?'var(--green)':'var(--red)')+';position:absolute;right:0;top:50%;transform:translateY(-50%)">'+(dv>=0?"+":"")+dvFmt+'</span>'}
+          s+='<div class="summary-val '+(metrics[m][3]?"bold":"")+bgCls+(metrics[m][0]==="Chrt Pays"?" cp-flash":"")+'" style="position:relative;'+(isBR?"color:var(--gld)":"")+'">'+metrics[m][2](rv)+deltaHtml+'</div>';
         }
       }
       s+='<div class="summary-label delta-row" style="font-size:13px;font-weight:700">\u0394 best</div>';
